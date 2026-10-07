@@ -12,6 +12,10 @@
 | 2026-10-06 | Ratings per user: min 3, max 30, skewed (~20% 3–4, ~60% 5–15, ~20% 16–30); min-3 applied at end of step 6 | Every user testable; keeps a cold-start segment; library-like sparsity |
 | 2026-10-06 | Null-language books kept and re-checked after enrichment | Avoid losing ~1,000 books unnecessarily |
 | 2026-10-07 | Book de-duplication key: full lowercased title (series suffix kept) + first author; keep the most-rated copy; remap its ratings and to_read rows; 1 pair merged (*'Salem's Lot*, 1292 → 349) | A looser key (series suffix stripped) wrongly merged distinct *Avatar: The Last Airbender* volumes; the strict key is conservative |
+| 2026-10-07 | Genre whitelist: 44 genres built from merged tags (scripts/data/genre_whitelist.py); each book gets its top 3 by raw tag count | Simple and reproducible; ties broken alphabetically |
+| 2026-10-07 | Audience and format categories (young-adult, classics, childrens, graphic-novels, etc.) kept in the whitelist | Useful TF-IDF signal for a library catalogue |
+| 2026-10-07 | `chick-lit` renamed `womens-fiction` (raw tag still `chick-lit`) | More neutral label for the UI |
+| 2026-10-07 | `erotica` not whitelisted; books with erotica in their top 3 are excluded from the catalogue, with their ratings, to_read and tag rows. 238 books, 22,798 ratings, 8,673 to_read rows removed (ids in cleaning_report.json) | Catalogue curated for an academic library |
 | 2026-10-06 | Canonical book id = books.csv `id`; Goodreads id kept as `goodreads_id` | Matches ratings/book_tags/to_read |
 | 2026-10-06 | UI per docs/STYLE.md (Literata + Atkinson Hyperlegible, library green, reason slip) | Educational, readable, makes "why" visible (NFR1) |
 
