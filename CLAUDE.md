@@ -116,10 +116,10 @@ Run each step as a rerunnable script. Ask for approval at each checkpoint marked
    report the match rate.** ⏸ Then run the full set.
 5. **Build text:** `content_text = genres + author + description`. Keep books that have genres even when the description
    is missing. Drop books that have neither.
-6. **Sparsify ratings:** keep only ratings for books that survive. Sample users (target 3,000–5,000). Cap each user at
-   30 ratings (random, not top-rated). Then apply the **minimum of 3 ratings per user last**. Target distribution: about
-   20% with 3–4, about 60% with 5–15, about 20% with 16–30. Use seeded randomness. Report the distribution and the
-   sparsity before and after.
+6. **Sparsify ratings:** keep only ratings for books that survive. **Keep all users** with at least 3 ratings (no
+   sampling down). Cap each user at 30 ratings (random, not top-rated). Then apply the **minimum of 3 ratings per user
+   last**. Accept the natural distribution and report it honestly, with no target shape. Use seeded randomness. Report
+   the distribution and the sparsity before and after.
 7. **Simulate borrows:** add `BORROW` events consistent with each user's genres, keeping the sparsity. Use seeded
    randomness.
 8. **Output:** `books_clean.csv`, `interactions_clean.csv` and `cleaning_report.md` (counts before and after each rule,

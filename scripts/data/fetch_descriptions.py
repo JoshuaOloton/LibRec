@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[2]
 BOOKS = ROOT / "data" / "processed" / "books.csv"
 CACHE = ROOT / "data" / "cache" / "descriptions.jsonl"
 MIN_LEN = 50  # shorter than this is not a usable description
-DELAY = 1.0   # seconds between requests
+DELAY = 0.5   # seconds between requests
 OL, GB = "https://openlibrary.org", "https://www.googleapis.com/books/v1/volumes"
 
 sess = requests.Session()

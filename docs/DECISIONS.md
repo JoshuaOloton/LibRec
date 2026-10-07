@@ -9,13 +9,15 @@
 | 2026-10-06 | Dataset: goodbooks-10k (original release, ~982k ratings) | Clean 1–5 ratings; Book-Crossing rejected (no genre or description) |
 | 2026-10-06 | Option C book text: genre tags + author + description | Report names genre, author and description as TF-IDF inputs |
 | 2026-10-06 | Descriptions fetched from Open Library, then Google Books | goodbooks has no description field |
-| 2026-10-06 | Ratings per user: min 3, max 30, skewed (~20% 3–4, ~60% 5–15, ~20% 16–30); min-3 applied at end of step 6 | Every user testable; keeps a cold-start segment; library-like sparsity |
+| 2026-10-06 | Ratings per user: min 3, max 30; min-3 applied at end of step 6. (Target distribution ~20/60/20 superseded 2026-10-07 below) | Every user testable; keeps a cold-start segment; library-like sparsity |
 | 2026-10-06 | Null-language books kept and re-checked after enrichment | Avoid losing ~1,000 books unnecessarily |
 | 2026-10-07 | Book de-duplication key: full lowercased title (series suffix kept) + first author; keep the most-rated copy; remap its ratings and to_read rows; 1 pair merged (*'Salem's Lot*, 1292 → 349) | A looser key (series suffix stripped) wrongly merged distinct *Avatar: The Last Airbender* volumes; the strict key is conservative |
 | 2026-10-07 | Genre whitelist: 44 genres built from merged tags (scripts/data/genre_whitelist.py); each book gets its top 3 by raw tag count | Simple and reproducible; ties broken alphabetically |
 | 2026-10-07 | Audience and format categories (young-adult, classics, childrens, graphic-novels, etc.) kept in the whitelist | Useful TF-IDF signal for a library catalogue |
 | 2026-10-07 | `chick-lit` renamed `womens-fiction` (raw tag still `chick-lit`) | More neutral label for the UI |
 | 2026-10-07 | `erotica` not whitelisted; books with erotica in their top 3 are excluded from the catalogue, with their ratings, to_read and tag rows. 238 books, 22,798 ratings, 8,673 to_read rows removed (ids in cleaning_report.json) | Catalogue curated for an academic library |
+| 2026-10-07 | Catalogue limited to 1,000 books (select_catalogue.py, after genre assignment): ≥10 most-rated books per primary genre (all if fewer; primary = first of the top-3 genres), remaining slots filled by most-rated overall; ratings, to_read and tag rows of other books dropped. Result: 420 guaranteed + 580 filled; keeps 99,989 ratings (10.2% of the original 981,756). Cached descriptions for books outside the selection are kept in data/cache but unused | Prototype scale; well above the 727-book benchmark in the report |
+| 2026-10-07 | Step 6: keep all users with ≥3 ratings (no sampling down), cap each at 30 at random (seeded), accept and report the natural distribution; no ~20/60/20 target | Realistic library skew; gives a large cold-start segment for the switching-rule analysis |
 | 2026-10-06 | Canonical book id = books.csv `id`; Goodreads id kept as `goodreads_id` | Matches ratings/book_tags/to_read |
 | 2026-10-06 | UI per docs/STYLE.md (Literata + Atkinson Hyperlegible, library green, reason slip) | Educational, readable, makes "why" visible (NFR1) |
 
