@@ -94,8 +94,13 @@ Known issues, already confirmed by profiling `books.csv`:
 - 3,332 `image_url`s are "nophoto" placeholders, so the UI needs a fallback cover. Open Library covers are optional.
 - 38 books have years below 1000, including negative years. These are ancient works (e.g. *The Iliad*). Keep them.
 - Tags are noisy: "to-read", "favorites", "owned", "kindle" and so on are not genres.
-- Ratings are **too dense** for a library (about 100 ratings per user on average). The report requires realistic
-  sparsity.
+- This copy of `ratings.csv` is the **original release**, with about 982k ratings and ~53k users (not the later 6M
+  version). After the English filter it's about 20 ratings per user and about 0.23% density, which is already near
+  library-like. Step 6 therefore mostly **samples users and caps** them, and only lightly thins.
+- The 1,084 books with a null `language_code` are **kept** and re-checked after description enrichment. They are not
+  dropped up front.
+- The canonical book id is `books.csv` `id` (= `book_id` in ratings/book_tags/to_read). Keep the Goodreads id as
+  `goodreads_id`.
 
 ### Data pipeline: "Option C" (tags + author + description)
 
@@ -111,8 +116,10 @@ Run each step as a rerunnable script. Ask for approval at each checkpoint marked
    report the match rate.** ⏸ Then run the full set.
 5. **Build text:** `content_text = genres + author + description`. Keep books that have genres even when the description
    is missing. Drop books that have neither.
-6. **Sparsify ratings:** keep only ratings for books that survive. Sample users (target 2,000–5,000). Thin each user to
-   a library-like count (target 3–30, skewed toward fewer). Use seeded randomness. Report sparsity before and after.
+6. **Sparsify ratings:** keep only ratings for books that survive. Sample users (target 3,000–5,000). Cap each user at
+   30 ratings (random, not top-rated). Then apply the **minimum of 3 ratings per user last**. Target distribution: about
+   20% with 3–4, about 60% with 5–15, about 20% with 16–30. Use seeded randomness. Report the distribution and the
+   sparsity before and after.
 7. **Simulate borrows:** add `BORROW` events consistent with each user's genres, keeping the sparsity. Use seeded
    randomness.
 8. **Output:** `books_clean.csv`, `interactions_clean.csv` and `cleaning_report.md` (counts before and after each rule,
@@ -181,19 +188,26 @@ topN = 10
   threshold.
 - Output `results/*.json` and `results/*.csv`, with seeds, N, weights, the relevance threshold and dataset stats.
 
-## Build order (five cycles; each cycle ends working and verified)
+## Build order (Cycle 0 for data, then the report's five cycles; each one ends working and verified)
 
-0. **Data prep** (pipeline above) → clean CSVs + cleaning report
-1. **Foundation:** Prisma schema + seed, auth, catalogue browse/search (title/author/genre), recording interactions,
-   admin book CRUD. *FR1–3, FR10*
-2. **Content engine** standalone + its evaluation, giving **baseline 1**. *FR4*
-3. **Collaborative engine** standalone + its evaluation, giving **baseline 2**. *FR5*
-4. **Hybrid:** switching, normalisation, weighting, weight-tuning sweep. *FR6–8*
-5. **App layer:** recommendations page with explanations, admin stats, logging, full benchmark, UAT checks.
-   *FR9, FR11, FR12, NFR1–6*
+| Cycle | Scope | Done when |
+|---|---|---|
+| **Cycle 0: Data prep** | The data pipeline above, steps 1–8 | Clean CSVs + `cleaning_report.md` exist |
+| **Cycle 1: Foundation** | Prisma schema + seed (pipeline step 9), auth, catalogue browse/search (title/author/genre), recording interactions, admin book CRUD (*FR1–3, FR10*) | TC01–TC04, TC12 pass |
+| **Cycle 2: Content engine** | TF-IDF + cosine standalone, evaluation harness (*FR4*) | TC05 passes; harness writes **baseline 1** to `results/` |
+| **Cycle 3: Collaborative engine** | Pearson standalone (*FR5*) | TC06 passes; **baseline 2** on the same splits |
+| **Cycle 4: Hybrid** | Switching, normalisation, weighting, weight sweep (*FR6–8*) | TC07–TC10 pass; sweep results shown before choosing the weights |
+| **Cycle 5: App layer** | Recommendations page with explanations, admin stats, logging, final benchmark, UAT checks (*FR9, FR11, FR12, NFR1–6*) | TC11, TC13–TC15 pass; final benchmark in `results/` |
+
+Cycle 0 is an addition to the report's plan. The report folds data preparation into its Cycle 1.
 
 Work **one cycle per session**. Stop at the end of each cycle and summarise what was verified.
 Do not start Cycle 4 until both baselines produce metrics from the harness.
+
+## UI & styling
+
+Follow `docs/STYLE.md` for all UI work: colour tokens, typography (Literata + Atkinson Hyperlegible), the **reason slip**
+on every recommendation, screen layouts, fallback covers and copy rules. Read it before building any screen.
 
 ## UX constraints (from the Technology Acceptance Model)
 
