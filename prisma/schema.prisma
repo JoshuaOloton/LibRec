@@ -1,0 +1,117 @@
+// LibRec: Prisma schema (PostgreSQL)
+// The five core entities from the report (Table 3.6 / Figure 3.10).
+// Models are PascalCase in code and mapped to snake_case tables/columns so the
+// database matches the report's ERD.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  PATRON
+  ADMIN
+}
+
+enum InteractionType {
+  BORROW
+  RATE
+}
+
+enum SourceComponent {
+  CONTENT
+  COLLABORATIVE
+  HYBRID
+}
+
+/// Patron and administrator accounts.
+model User {
+  id           Int      @id @default(autoincrement()) @map("user_id")
+  name         String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         Role     @default(PATRON)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  interactions       Interaction[]
+  recommendationLogs RecommendationLog[]
+
+  @@map("users")
+}
+
+/// Catalogue entry. genres + author + description feed TF-IDF (via contentText).
+model Book {
+  id              Int      @id @default(autoincrement()) @map("book_id")
+  title           String
+  author          String
+  genres          String[]                         // e.g. {fantasy, young-adult, classics}
+  description     String?
+  publicationYear Int?     @map("publication_year")
+  isbn            String?  @db.VarChar(10)
+  coverUrl        String?  @map("cover_url")      // null -> UI shows a generated fallback cover
+  contentText     String   @map("content_text")   // prepared TF-IDF input
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  interactions       Interaction[]
+  feature            BookFeature?
+  recommendationLogs RecommendationLog[]
+
+  @@index([title])
+  @@index([author])
+  @@map("books")
+}
+
+/// Borrow and rating events: the sparse user-item matrix used by collaborative filtering.
+model Interaction {
+  id          Int             @id @default(autoincrement()) @map("interaction_id")
+  userId      Int             @map("user_id")
+  bookId      Int             @map("book_id")
+  type        InteractionType @map("interaction_type")
+  ratingValue Float?          @map("rating_value")  // 1–5 for RATE; null for BORROW
+  timestamp   DateTime        @default(now())
+  simulated   Boolean         @default(false)       // true = generated in Cycle 0 (borrows)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([bookId])
+  @@index([userId, bookId])
+  @@map("interactions")
+}
+
+/// Derived TF-IDF vector, kept separate from Book so features can be recomputed (NFR3).
+model BookFeature {
+  id          Int      @id @default(autoincrement()) @map("feature_id")
+  bookId      Int      @unique @map("book_id")
+  tfidfVector Json     @map("tfidf_vector")   // sparse: { "termIndex": weight, ... }
+  generatedAt DateTime @default(now()) @map("generated_at")
+
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@map("book_features")
+}
+
+/// Every served recommendation and the component that produced it (FR9).
+model RecommendationLog {
+  id              Int             @id @default(autoincrement()) @map("log_id")
+  userId          Int             @map("user_id")
+  bookId          Int             @map("book_id")
+  sourceComponent SourceComponent @map("source_component")
+  score           Float
+  rank            Int?                                   // position in the served top-N
+  reason          String?                                // the "why" shown in the reason slip (NFR1)
+  servedAt        DateTime        @default(now()) @map("served_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@index([userId, servedAt])
+  @@index([sourceComponent])
+  @@map("recommendation_logs")
+}
