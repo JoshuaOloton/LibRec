@@ -1,26 +1,140 @@
 @import "tailwindcss";
 
+/* LibRec colour tokens (docs/STYLE.md). Never hard-code hex values in components. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --paper: #f6f7f4;
+  --surface: #ffffff;
+  --ink: #1c2422;
+  --ink-muted: #5d6a65;
+  --rule: #dce1dd;
+  --shelf: #1e5b45;
+  --shelf-deep: #15412f;
+  --brass: #b9832a;
+  --danger: #a23b2a;
+
+  /* Fallback-cover tones, picked per primary genre. All carry white text at AA. */
+  --cover-1: #2f5d62;
+  --cover-2: #5b4b6b;
+  --cover-3: #7a4b3a;
+  --cover-4: #3b5b7e;
+  --cover-5: #6b5b2a;
+  --cover-6: #7b3f4a;
+  --cover-7: #4a5a3a;
+  --cover-8: #44505a;
+
+  /* shadcn-compatible aliases */
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: var(--surface);
+  --card-foreground: var(--ink);
+  --primary: var(--shelf);
+  --primary-foreground: var(--surface);
+  --muted-foreground: var(--ink-muted);
+  --border: var(--rule);
+  --input: var(--rule);
+  --ring: var(--shelf);
+  --destructive: var(--danger);
 }
 
 @theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-rule: var(--rule);
+  --color-shelf: var(--shelf);
+  --color-shelf-deep: var(--shelf-deep);
+  --color-brass: var(--brass);
+  --color-danger: var(--danger);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-destructive: var(--destructive);
+
+  --font-sans: var(--font-atkinson), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-literata), ui-serif, Georgia, serif;
+
+  /* Type scale (rem): 0.875 · 1 · 1.125 · 1.375 · 1.75 · 2.25 */
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.25rem;
+
+  --radius-cover: 2px;
+  --container-page: 1200px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Base rules live in @layer base so Tailwind utilities (e.g. text-surface on a link) can override them. */
+@layer base {
+  html {
+    background: var(--paper);
+  }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  a {
+    color: inherit;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--shelf);
+    outline-offset: 2px;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* The one deliberate motion: new picks fading in (used on Your shelf, later). */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.fade-in {
+  animation: fade-in 400ms ease-out both;
+}
+
+@keyframes pulse-quiet {
+  50% {
+    opacity: 0.55;
+  }
+}
+.skeleton {
+  background: var(--rule);
+  animation: pulse-quiet 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-in,
+  .skeleton {
+    animation: none;
+  }
+  html {
+    scroll-behavior: auto;
+  }
 }
