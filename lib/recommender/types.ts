@@ -5,9 +5,14 @@ export interface HistoryItem {
   ratingValue: number | null;
 }
 
+/** Which component a hybrid recommendation is attributed to. */
+export type ScoreSource = "CONTENT" | "COLLABORATIVE";
+
 export interface ScoredItem {
   bookId: number;
   score: number;
+  /** Set by the hybrid engine only. */
+  source?: ScoreSource;
 }
 
 export interface RecommendContext {

@@ -36,6 +36,17 @@ export interface SegmentSummary {
   coveragePartial: number;
   /** Share who received a full list of N. */
   coverageFull: number;
+  /**
+   * Supplementary: the same metrics over only the patrons who received at least one recommendation. Kept apart from
+   * the headline numbers; NaN when nobody in the segment was covered.
+   */
+  coveredUsers: number;
+  precisionCovered: number;
+  recallCovered: number;
+  f1Covered: number;
+  /** Share of all recommended items attributed to each component (hybrid only; NaN otherwise or with no items). */
+  contentShare: number;
+  collabShare: number;
 }
 
 export interface SeedResult {
@@ -66,6 +77,12 @@ export interface ConfigAggregate {
       coverageNone: Aggregate;
       coveragePartial: Aggregate;
       coverageFull: Aggregate;
+      coveredUsers: Aggregate;
+      precisionCovered: Aggregate;
+      recallCovered: Aggregate;
+      f1Covered: Aggregate;
+      contentShare: Aggregate;
+      collabShare: Aggregate;
     }
   >;
 }
@@ -77,6 +94,20 @@ export function evaluateSeed(
   options: EvalOptions,
 ): SeedResult {
   const { train, test } = splitInteractions(interactions, seed, options.split);
+  return evaluatePartition(train, test, seed, configs, options);
+}
+
+/**
+ * Evaluate every configuration on one given partition. Configurations are built from `train` only. The same entry point
+ * serves the test partition and, for weight tuning, a validation partition carved out of the training rows.
+ */
+export function evaluatePartition(
+  train: EvalInteraction[],
+  test: EvalInteraction[],
+  seed: number,
+  configs: EvalConfig[],
+  options: EvalOptions,
+): SeedResult {
   const threshold = options.coldStartThreshold ?? COLD_START_THRESHOLD;
 
   const trainByUser = groupByUser(train);
@@ -101,23 +132,56 @@ export function evaluateSeed(
     configs: {},
   };
 
-  for (const config of configs) {
-    const recommender = config.build(train);
-    const empty = () => ({ p: [] as number[], r: [] as number[], f: [] as number[], none: 0, partial: 0, full: 0 });
-    const rows: Record<Segment, ReturnType<typeof empty>> = { all: empty(), cold: empty(), warm: empty() };
-    for (const userId of evaluated) {
-      const history = buildHistory(trainByUser.get(userId) ?? []);
-      const recs = recommender.recommend(history, options.n, { userId }).map((r) => r.bookId);
+  const empty = () => ({
+    p: [] as number[],
+    r: [] as number[],
+    f: [] as number[],
+    cp: [] as number[],
+    cr: [] as number[],
+    cf: [] as number[],
+    none: 0,
+    partial: 0,
+    full: 0,
+    content: 0,
+    collab: 0,
+  });
+  type Rows = Record<Segment, ReturnType<typeof empty>>;
+  const built = configs.map((config) => ({
+    config,
+    recommender: config.build(train),
+    rows: { all: empty(), cold: empty(), warm: empty() } as Rows,
+  }));
+
+  // Patron-outer, configuration-inner: results are identical to a configuration-outer loop (recommenders are
+  // stateless per patron), and configurations that share per-patron scoring can cache the last patron's scores.
+  for (const userId of evaluated) {
+    const history = buildHistory(trainByUser.get(userId) ?? []);
+    for (const { recommender, rows } of built) {
+      const items = recommender.recommend(history, options.n, { userId });
+      const recs = items.map((r) => r.bookId);
       const m = topNMetrics(recs, relevantByUser.get(userId)!, options.n);
       for (const seg of ["all", history.length < threshold ? "cold" : "warm"] as Segment[]) {
-        rows[seg].p.push(m.precision);
-        rows[seg].r.push(m.recall);
-        rows[seg].f.push(m.f1);
-        if (recs.length === 0) rows[seg].none++;
-        else if (recs.length < options.n) rows[seg].partial++;
-        else rows[seg].full++;
+        const row = rows[seg];
+        row.p.push(m.precision);
+        row.r.push(m.recall);
+        row.f.push(m.f1);
+        if (recs.length === 0) row.none++;
+        else {
+          row.cp.push(m.precision);
+          row.cr.push(m.recall);
+          row.cf.push(m.f1);
+          if (recs.length < options.n) row.partial++;
+          else row.full++;
+        }
+        for (const item of items) {
+          if (item.source === "CONTENT") row.content++;
+          else if (item.source === "COLLABORATIVE") row.collab++;
+        }
       }
     }
+  }
+
+  for (const { config, rows } of built) {
     result.configs[config.name] = Object.fromEntries(
       SEGMENTS.map((seg) => {
         const row = rows[seg];
@@ -132,6 +196,12 @@ export function evaluateSeed(
             coverageNone: row.none / users,
             coveragePartial: row.partial / users,
             coverageFull: row.full / users,
+            coveredUsers: row.cp.length,
+            precisionCovered: mean(row.cp),
+            recallCovered: mean(row.cr),
+            f1Covered: mean(row.cf),
+            contentShare: row.content + row.collab === 0 ? NaN : row.content / (row.content + row.collab),
+            collabShare: row.content + row.collab === 0 ? NaN : row.collab / (row.content + row.collab),
           },
         ];
       }),
@@ -159,6 +229,12 @@ export function aggregate(results: SeedResult[], configName: string): ConfigAggr
           coverageNone: agg((s) => s.coverageNone, seg),
           coveragePartial: agg((s) => s.coveragePartial, seg),
           coverageFull: agg((s) => s.coverageFull, seg),
+          coveredUsers: agg((s) => s.coveredUsers, seg),
+          precisionCovered: agg((s) => s.precisionCovered, seg),
+          recallCovered: agg((s) => s.recallCovered, seg),
+          f1Covered: agg((s) => s.f1Covered, seg),
+          contentShare: agg((s) => s.contentShare, seg),
+          collabShare: agg((s) => s.collabShare, seg),
         },
       ]),
     ) as ConfigAggregate["segments"],

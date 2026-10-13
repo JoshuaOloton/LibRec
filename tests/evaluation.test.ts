@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { topNMetrics, mean, std } from "@/lib/evaluation/metrics";
 import { mulberry32 } from "@/lib/evaluation/random";
-import { aggregate, evaluateSeed, type EvalConfig } from "@/lib/evaluation/runner";
+import { aggregate, evaluatePartition, evaluateSeed, type EvalConfig } from "@/lib/evaluation/runner";
 import { splitInteractions, type EvalInteraction } from "@/lib/evaluation/split";
 import type { Recommender } from "@/lib/recommender/types";
 
@@ -136,5 +136,48 @@ describe("evaluateSeed", () => {
     expect(agg.segments.cold.users.mean).toBe(4);
     expect(agg.segments.all.precision.perSeed).toHaveLength(3);
     expect(agg.segments.all.f1.std).toBeGreaterThanOrEqual(0);
+  });
+
+  it("reports precision over covered patrons separately, and attribution shares when items carry a source", () => {
+    // Patron 1 (10 books, warm) gets a full list; patron 2 (3 books, cold) gets nothing. Both hold out rated-5 books.
+    const rows: EvalInteraction[] = [];
+    for (let b = 1; b <= 10; b++) rows.push(rate(1, b, 5));
+    for (let b = 1; b <= 3; b++) rows.push(rate(2, b, 5));
+    const sourced: Recommender = {
+      name: "sourced",
+      recommend: (history, n, ctx) =>
+        ctx?.userId === 2
+          ? []
+          : Array.from({ length: n }, (_, i) => ({ bookId: 100 + i, score: 1, source: i < 3 ? ("CONTENT" as const) : ("COLLABORATIVE" as const) })),
+    };
+    const r = evaluateSeed(rows, 1, [{ name: "s", label: "s", baseline: false, build: () => sourced }], { n: 10 });
+    const all = r.configs.s.all;
+    expect(all.users).toBe(2);
+    expect(all.coverageNone).toBeCloseTo(0.5, 12);
+    expect(all.coveredUsers).toBe(1);
+    // Nobody hits (books 100+ are not held out), so covered precision is 0 and the headline mean includes the empty patron.
+    expect(all.precisionCovered).toBe(0);
+    expect(all.contentShare).toBeCloseTo(0.3, 12);
+    expect(all.collabShare).toBeCloseTo(0.7, 12);
+    expect(r.configs.s.cold.coveredUsers).toBe(0);
+    expect(r.configs.s.cold.precisionCovered).toBeNaN();
+    expect(r.configs.s.cold.contentShare).toBeNaN();
+    expect(r.configs.s.warm.contentShare).toBeCloseTo(0.3, 12);
+  });
+
+  it("evaluates on a validation partition carved from training rows only", () => {
+    const data = dataset([6, 8, 10, 12]);
+    const { train, test } = splitInteractions(data, 1);
+    const inner = splitInteractions(train, 1001);
+    const key = (x: EvalInteraction) => `${x.userId}:${x.bookId}`;
+    const outerTest = new Set(test.map(key));
+    for (const row of [...inner.train, ...inner.test]) expect(outerTest.has(key(row))).toBe(false);
+    expect(inner.train.length + inner.test.length).toBe(train.length);
+    // Evaluating the carved partition never builds from, or scores against, the outer test rows.
+    const seen: EvalInteraction[][] = [];
+    const spy: EvalConfig = { name: "spy", label: "spy", baseline: true, build: (t) => (seen.push(t), { name: "spy", recommend: () => [] }) };
+    const res = evaluatePartition(inner.train, inner.test, 1, [spy], { n: 10 });
+    expect(seen).toEqual([inner.train]);
+    expect(res.testInteractions).toBe(inner.test.length);
   });
 });
