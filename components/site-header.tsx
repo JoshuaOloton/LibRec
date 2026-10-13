@@ -20,6 +20,11 @@ export async function SiteHeader() {
       <Link href="/catalogue" className={navLink}>
         Catalogue
       </Link>
+      {user && (
+        <Link href="/recommendations" className={navLink}>
+          Your shelf
+        </Link>
+      )}
       {user?.role === "ADMIN" && (
         <Link href="/admin" className={navLink}>
           Admin

@@ -82,6 +82,8 @@ model Interaction {
   @@index([userId])
   @@index([bookId])
   @@index([userId, bookId])
+  // One BORROW and one RATE per patron and book: re-rating updates the row instead of duplicating (FR3).
+  @@unique([userId, bookId, type])
   @@map("interactions")
 }
 

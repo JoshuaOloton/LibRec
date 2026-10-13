@@ -13,6 +13,15 @@ function toneFor(seed: string) {
   return (Math.abs(h) % TONES) + 1;
 }
 
+/** Keep in step with images.remotePatterns in next.config.ts. */
+function isOptimisable(url: string) {
+  try {
+    return new URL(url).hostname === "images.gr-assets.com";
+  } catch {
+    return false;
+  }
+}
+
 type Props = {
   title: string;
   author: string;
@@ -52,6 +61,8 @@ export function BookCover({
           sizes={sizes}
           priority={priority}
           className="object-cover"
+          // next/image only optimises configured hosts; admin-entered cover links may be anywhere.
+          unoptimized={!isOptimisable(coverUrl)}
           onError={() => setFailed(true)}
         />
       ) : (

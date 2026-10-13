@@ -1,10 +1,9 @@
 "use server";
 
-import bcrypt from "bcryptjs";
 import { AuthError } from "next-auth";
 import { z } from "zod";
 import { signIn } from "@/auth";
-import { prisma } from "@/server/db";
+import { EmailTakenError, registerUser } from "@/server/services/users";
 
 export type AuthFormState = {
   error?: string;
@@ -78,15 +77,15 @@ export async function registerAction(_prev: AuthFormState, formData: FormData): 
   }
 
   const { name, email, password } = parsed.data;
-  const existing = await prisma.user.findUnique({ where: { email }, select: { id: true } });
-  if (existing) {
-    return { fieldErrors: { email: "An account with this email already exists. Log in instead." }, values };
-  }
-
   // Registration only ever creates patrons; admins come from the seed (DECISIONS.md).
-  await prisma.user.create({
-    data: { name, email, passwordHash: await bcrypt.hash(password, 10), role: "PATRON" },
-  });
+  try {
+    await registerUser({ name, email, password });
+  } catch (err) {
+    if (err instanceof EmailTakenError) {
+      return { fieldErrors: { email: "An account with this email already exists. Log in instead." }, values };
+    }
+    throw err;
+  }
 
   const result = await signInAndRedirect(email, password, safeRedirect(formData.get("redirectTo")));
   return { ...result, values };
