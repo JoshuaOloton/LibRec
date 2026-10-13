@@ -27,6 +27,25 @@ export function fit(docs: string[][], options: TfidfOptions = DEFAULT_TFIDF_OPTI
   return { vocab, idf };
 }
 
+/** Cosine similarity of two sparse vectors; 0 when either is the zero vector. */
+export function cosine(a: SparseVector, b: SparseVector): number {
+  const [small, large] = Object.keys(a).length <= Object.keys(b).length ? [a, b] : [b, a];
+  let dot = 0;
+  for (const k of Object.keys(small)) {
+    const w = large[Number(k)];
+    if (w !== undefined) dot += small[Number(k)] * w;
+  }
+  const na = norm(a);
+  const nb = norm(b);
+  return na === 0 || nb === 0 ? 0 : dot / (na * nb);
+}
+
+export function norm(v: SparseVector): number {
+  let s = 0;
+  for (const k of Object.keys(v)) s += v[Number(k)] ** 2;
+  return Math.sqrt(s);
+}
+
 /** Sublinear TF (1 + ln tf) x IDF, L2-normalised. Unknown terms are ignored. */
 export function transform(tokens: string[], model: TfidfModel): SparseVector {
   const counts = new Map<number, number>();

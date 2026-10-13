@@ -1,6 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
-import { tokenise } from "@/lib/recommender/text";
-import { fit, transform } from "@/lib/recommender/tfidf";
+import { buildItemVectors } from "@/lib/recommender/content";
 
 const BATCH = 500;
 
@@ -11,13 +10,12 @@ const BATCH = 500;
  */
 export async function regenerateAllFeatures(db: PrismaClient) {
   const books = await db.book.findMany({ select: { id: true, contentText: true }, orderBy: { id: "asc" } });
-  const tokens = books.map((b) => tokenise(b.contentText));
-  const model = fit(tokens);
+  const { model, vectors } = buildItemVectors(books);
   const generatedAt = new Date();
 
-  const rows = books.map((b, i) => ({
+  const rows = books.map((b) => ({
     bookId: b.id,
-    tfidfVector: transform(tokens[i], model) as Record<string, number>,
+    tfidfVector: vectors.get(b.id)! as Record<string, number>,
     generatedAt,
   }));
 
