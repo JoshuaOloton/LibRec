@@ -17,6 +17,7 @@ import {
   type EvalConfig,
 } from "@/lib/evaluation/runner";
 import { buildItemVectors, ContentRecommender, DEFAULT_CONTENT_OPTIONS } from "@/lib/recommender/content";
+import { CollaborativeRecommender, DEFAULT_COLLABORATIVE_OPTIONS } from "@/lib/recommender/collaborative";
 import { PopularRecommender } from "@/lib/recommender/popular";
 
 const ROOT = path.resolve(__dirname, "..");
@@ -49,6 +50,19 @@ function main() {
 
   const available: Record<string, EvalConfig> = {
     content: { name: "content", label: "Content-based (TF-IDF + cosine)", baseline: false, build: () => content },
+    collab: {
+      name: "collab",
+      label: "Collaborative (user-user Pearson)",
+      baseline: false,
+      // Fitted on training explicit ratings only; borrows never enter CF (DECISIONS 2026-10-13).
+      build: (train) =>
+        new CollaborativeRecommender(
+          train
+            .filter((r) => r.type === "RATE" && r.ratingValue !== null)
+            .map((r) => ({ userId: r.userId, bookId: r.bookId, ratingValue: r.ratingValue! })),
+          DEFAULT_COLLABORATIVE_OPTIONS,
+        ),
+    },
     popular: {
       name: "popular",
       label: "Most popular (sanity check, NOT part of the hypothesis)",
@@ -101,6 +115,8 @@ function main() {
     coldStartDefinition: "fewer than coldStartThreshold distinct books in training",
     evaluatedPatrons: "patrons with at least one relevant held-out book",
     contentOptions: DEFAULT_CONTENT_OPTIONS,
+    collaborativeOptions: DEFAULT_COLLABORATIVE_OPTIONS,
+    coverageDefinition: "share of evaluated patrons receiving 0, 1..N-1 or N recommendations; no backfilling",
     dataset: datasetStats,
     configs: configs.map((c) => ({ name: c.name, label: c.label, baseline: c.baseline })),
     perSeed: results,
@@ -116,7 +132,7 @@ function main() {
   const lines = [header.join(",")];
   for (const c of configs) {
     for (const seg of SEGMENTS) {
-      for (const metric of ["users", "precision", "recall", "f1"] as const) {
+      for (const metric of ["users", "precision", "recall", "f1", "coverageNone", "coveragePartial", "coverageFull"] as const) {
         const a = summary[c.name].segments[seg][metric];
         lines.push([c.name, c.baseline ? "sanity-baseline" : "configuration", seg, metric, a.mean, a.std, ...a.perSeed].join(","));
       }
@@ -127,12 +143,13 @@ function main() {
   console.log(`\nDataset: ${datasetStats.users} patrons, ${datasetStats.books} books, ${datasetStats.interactions} interactions, density ${datasetStats.densityPct.toFixed(2)}%`);
   console.log(`N = ${n}, seeds = ${seeds.join(",")}, relevant = real RATE >= ${RELEVANCE_THRESHOLD}\n`);
   const f = (a: { mean: number; std: number }, d = 4) => `${a.mean.toFixed(d)} ± ${a.std.toFixed(d)}`;
+  const pct = (a: { mean: number }) => `${(a.mean * 100).toFixed(1)}%`;
   for (const c of configs) {
     console.log(`${c.label}${c.baseline ? "  [sanity check only]" : ""}`);
     for (const seg of SEGMENTS) {
       const s = summary[c.name].segments[seg];
       console.log(
-        `  ${seg.padEnd(5)} users≈${s.users.mean.toFixed(0).padStart(5)}  P@${n} ${f(s.precision)}  R@${n} ${f(s.recall)}  F1@${n} ${f(s.f1)}`,
+        `  ${seg.padEnd(5)} users≈${s.users.mean.toFixed(0).padStart(5)}  P@${n} ${f(s.precision)}  R@${n} ${f(s.recall)}  F1@${n} ${f(s.f1)}  coverage 0/1-${n - 1}/${n}: ${pct(s.coverageNone)}/${pct(s.coveragePartial)}/${pct(s.coverageFull)}`,
       );
     }
   }
