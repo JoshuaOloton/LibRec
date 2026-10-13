@@ -20,6 +20,12 @@ export function buildItemVectors(books: { id: number; contentText: string }[]): 
   return { model, vectors: new Map(books.map((b, i) => [b.id, transform(tokens[i], model)])) };
 }
 
+/** A dense weighted-mean vector over the vocabulary, with its length. */
+export interface ContentProfile {
+  vector: Float64Array;
+  norm: number;
+}
+
 interface IndexedItem {
   terms: Int32Array;
   weights: Float64Array;
@@ -53,13 +59,17 @@ export class ContentRecommender implements Recommender {
   }
 
   /** Weighted mean of the patron's book vectors, or null when none of their books has a usable vector. */
-  profile(history: HistoryItem[]): { vector: Float64Array; norm: number } | null {
+  profile(history: HistoryItem[]): ContentProfile | null {
+    return this.weightedProfile(history.map((h) => ({ bookId: h.bookId, weight: h.ratingValue ?? this.options.borrowWeight })));
+  }
+
+  /** Weighted mean of the given books' vectors (weights need not sum to 1), or null when there is no usable vector. */
+  weightedProfile(entries: { bookId: number; weight: number }[]): ContentProfile | null {
     const vector = new Float64Array(this.dim);
     let totalWeight = 0;
-    for (const h of history) {
-      const item = this.items.get(h.bookId);
+    for (const { bookId, weight } of entries) {
+      const item = this.items.get(bookId);
       if (!item) continue;
-      const weight = h.ratingValue ?? this.options.borrowWeight;
       totalWeight += weight;
       for (let i = 0; i < item.terms.length; i++) vector[item.terms[i]] += weight * item.weights[i];
     }
@@ -72,19 +82,63 @@ export class ContentRecommender implements Recommender {
     return sumSq > 0 ? { vector, norm: Math.sqrt(sumSq) } : null;
   }
 
-  /** Cosine score for every book the patron has not interacted with. Empty when there is no usable profile. */
-  score(history: HistoryItem[]): Map<number, number> {
+  /**
+   * The centroid of the books in each group, with every group counting equally however many books it holds
+   * (used for genre onboarding: one group per picked genre).
+   */
+  groupCentroid(groups: number[][]): ContentProfile | null {
+    return this.weightedProfile(groups.flatMap((ids) => ids.map((bookId) => ({ bookId, weight: 1 / ids.length }))));
+  }
+
+  /** Cosine of a profile against every book except those in `exclude`. */
+  scoreProfile(profile: ContentProfile, exclude: ReadonlySet<number> = new Set()): Map<number, number> {
     const scores = new Map<number, number>();
-    const profile = this.profile(history);
-    if (!profile) return scores;
-    const seen = new Set(history.map((h) => h.bookId));
     for (const [bookId, item] of this.items) {
-      if (seen.has(bookId)) continue;
+      if (exclude.has(bookId)) continue;
       let dot = 0;
       for (let i = 0; i < item.terms.length; i++) dot += profile.vector[item.terms[i]] * item.weights[i];
       scores.set(bookId, item.norm === 0 ? 0 : dot / (item.norm * profile.norm));
     }
     return scores;
+  }
+
+  /** Cosine score for every book the patron has not interacted with. Empty when there is no usable profile. */
+  score(history: HistoryItem[]): Map<number, number> {
+    const profile = this.profile(history);
+    if (!profile) return new Map();
+    return this.scoreProfile(profile, new Set(history.map((h) => h.bookId)));
+  }
+
+  /** The books closest to one book (itself excluded), best first. */
+  similarTo(bookId: number, n: number): ScoredItem[] {
+    const profile = this.weightedProfile([{ bookId, weight: 1 }]);
+    if (!profile) return [];
+    return topN(this.scoreProfile(profile, new Set([bookId])), n);
+  }
+
+  /** Cosine between two books' vectors; 0 when either is unknown or empty. */
+  similarity(a: number, b: number): number {
+    const x = this.items.get(a);
+    const y = this.items.get(b);
+    if (!x || !y || x.norm === 0 || y.norm === 0) return 0;
+    // Term indices are ascending, so a two-pointer merge finds the shared terms.
+    let dot = 0;
+    for (let i = 0, j = 0; i < x.terms.length && j < y.terms.length; ) {
+      if (x.terms[i] === y.terms[j]) dot += x.weights[i++] * y.weights[j++];
+      else if (x.terms[i] < y.terms[j]) i++;
+      else j++;
+    }
+    return dot / (x.norm * y.norm);
+  }
+
+  /** Which of the patron's own books is closest to the candidate (ties to the lower book id), for the "why". */
+  mostSimilarOwn(candidateId: number, ownBookIds: number[]): { bookId: number; similarity: number } | null {
+    let best: { bookId: number; similarity: number } | null = null;
+    for (const bookId of [...ownBookIds].sort((p, q) => p - q)) {
+      const similarity = this.similarity(candidateId, bookId);
+      if (!best || similarity > best.similarity) best = { bookId, similarity };
+    }
+    return best;
   }
 
   recommend(history: HistoryItem[], n: number): ScoredItem[] {

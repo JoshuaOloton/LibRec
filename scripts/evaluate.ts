@@ -24,7 +24,7 @@ import {
 } from "@/lib/evaluation/runner";
 import { buildItemVectors, ContentRecommender, DEFAULT_CONTENT_OPTIONS } from "@/lib/recommender/content";
 import { CollaborativeRecommender, DEFAULT_COLLABORATIVE_OPTIONS } from "@/lib/recommender/collaborative";
-import { DEFAULT_HYBRID_OPTIONS, HybridEngine, type Scorer } from "@/lib/recommender/hybrid";
+import { INITIAL_HYBRID_OPTIONS, HybridEngine, type Scorer } from "@/lib/recommender/hybrid";
 import { PopularRecommender } from "@/lib/recommender/popular";
 
 const ROOT = path.resolve(__dirname, "..");
@@ -132,8 +132,8 @@ function main() {
     },
     hybrid: hybridConfig(
       "hybrid",
-      `Hybrid, initial weights (${DEFAULT_HYBRID_OPTIONS.contentWeight} content / ${DEFAULT_HYBRID_OPTIONS.collabWeight} collab)`,
-      DEFAULT_HYBRID_OPTIONS.contentWeight,
+      `Hybrid, initial weights (${INITIAL_HYBRID_OPTIONS.contentWeight} content / ${INITIAL_HYBRID_OPTIONS.collabWeight} collab)`,
+      INITIAL_HYBRID_OPTIONS.contentWeight,
     ),
     popular: {
       name: "popular",
@@ -258,7 +258,7 @@ function main() {
     contentOptions: DEFAULT_CONTENT_OPTIONS,
     collaborativeOptions: DEFAULT_COLLABORATIVE_OPTIONS,
     hybridOptions: {
-      ...DEFAULT_HYBRID_OPTIONS,
+      ...INITIAL_HYBRID_OPTIONS,
       topN: n,
       normalisation: "A: min-max per patron over their candidates (0 if no spread); B: clamp to [1, 5] then (B - 1) / 4; a candidate with no CF prediction contributes 0 from CF",
       attribution: "CONTENT if contentWeight*A_norm >= collabWeight*B_norm, else COLLABORATIVE; cold-path items are CONTENT",

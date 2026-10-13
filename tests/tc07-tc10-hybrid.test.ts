@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { CollaborativeRecommender, type Rating } from "@/lib/recommender/collaborative";
 import { ContentRecommender } from "@/lib/recommender/content";
-import { DEFAULT_HYBRID_OPTIONS, HybridEngine, type Scorer } from "@/lib/recommender/hybrid";
+import { DEFAULT_HYBRID_OPTIONS, HybridEngine, INITIAL_HYBRID_OPTIONS, type Scorer } from "@/lib/recommender/hybrid";
 import { clampScale, minMax } from "@/lib/recommender/normalise";
 import type { SparseVector } from "@/lib/recommender/tfidf";
 import type { HistoryItem } from "@/lib/recommender/types";
@@ -102,12 +102,12 @@ describe("TC09 normalisation and weights (hand-computed)", () => {
   const content = () => stub({ 11: 0.9, 12: 0.5, 13: 0.1, 14: 0.3 });
   const collab = () => stub({ 11: 3, 12: 5, 13: 6.2 });
 
-  it("combines with the default 0.35 / 0.65 weights", () => {
+  it("combines with the initial 0.35 / 0.65 weights", () => {
     // 11: 0.35*1    + 0.65*0.5 = 0.675
     // 12: 0.35*0.5  + 0.65*1   = 0.825
     // 13: 0.35*0    + 0.65*1   = 0.650
     // 14: 0.35*0.25 + 0.65*0   = 0.0875   (no CF prediction: contributes 0)
-    const out = new HybridEngine(content(), collab()).recommend(history, 10);
+    const out = new HybridEngine(content(), collab(), INITIAL_HYBRID_OPTIONS).recommend(history, 10);
     expect(out.map((o) => o.bookId)).toEqual([12, 11, 13, 14]);
     expect(out.map((o) => o.score)).toEqual([
       expect.closeTo(0.825, 12),
@@ -118,7 +118,7 @@ describe("TC09 normalisation and weights (hand-computed)", () => {
   });
 
   it("attributes each item to the larger contribution (ties to CONTENT)", () => {
-    const out = new HybridEngine(content(), collab()).recommend(history, 10);
+    const out = new HybridEngine(content(), collab(), INITIAL_HYBRID_OPTIONS).recommend(history, 10);
     const source = Object.fromEntries(out.map((o) => [o.bookId, o.source]));
     // 11: content 0.35 vs collab 0.325; 12: 0.175 vs 0.65; 13: 0 vs 0.65; 14: 0.0875 vs 0
     expect(source).toEqual({ 11: "CONTENT", 12: "COLLABORATIVE", 13: "COLLABORATIVE", 14: "CONTENT" });
@@ -149,7 +149,7 @@ describe("TC09 normalisation and weights (hand-computed)", () => {
   it("normalises per patron, not globally", () => {
     // The same cosine ordering with a tiny spread still spans the full [0, 1] range after min-max.
     const out = new HybridEngine(stub({ 11: 0.011, 12: 0.010 }), stub({})).recommend(history, 10);
-    expect(out[0].score).toBeCloseTo(0.35, 12);
+    expect(out[0].score).toBeCloseTo(DEFAULT_HYBRID_OPTIONS.contentWeight, 12);
     expect(out[1].score).toBeCloseTo(0, 12);
   });
 
@@ -159,8 +159,9 @@ describe("TC09 normalisation and weights (hand-computed)", () => {
 
   it("exposes its settings as named fields", () => {
     const e = new HybridEngine(stub({}), stub({}));
-    expect([e.contentWeight, e.collabWeight, e.coldStartThreshold, e.topN]).toEqual([0.35, 0.65, 3, 10]);
-    expect(DEFAULT_HYBRID_OPTIONS).toEqual({ contentWeight: 0.35, collabWeight: 0.65, coldStartThreshold: 3, topN: 10 });
+    expect([e.contentWeight, e.collabWeight, e.coldStartThreshold, e.topN]).toEqual([0.8, 0.2, 3, 10]);
+    expect(DEFAULT_HYBRID_OPTIONS).toEqual({ contentWeight: 0.8, collabWeight: 0.2, coldStartThreshold: 3, topN: 10 });
+    expect(INITIAL_HYBRID_OPTIONS).toEqual({ contentWeight: 0.35, collabWeight: 0.65, coldStartThreshold: 3, topN: 10 });
   });
 });
 

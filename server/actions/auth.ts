@@ -15,7 +15,7 @@ export type AuthFormState = {
  * Auth.js may hand back an absolute callbackUrl. Keep only its path, so the redirect always stays
  * on this site; anything unusable falls back to the catalogue.
  */
-function safeRedirect(value: FormDataEntryValue | null) {
+function safeRedirect(value: FormDataEntryValue | null, fallback = "/catalogue") {
   let to = typeof value === "string" ? value : "";
   if (/^https?:\/\//i.test(to)) {
     try {
@@ -25,7 +25,7 @@ function safeRedirect(value: FormDataEntryValue | null) {
       to = "";
     }
   }
-  return to.startsWith("/") && !to.startsWith("//") ? to : "/catalogue";
+  return to.startsWith("/") && !to.startsWith("//") ? to : fallback;
 }
 
 const emailSchema = z.string().trim().toLowerCase().pipe(z.email("Enter a valid email address, like name@example.com."));
@@ -87,6 +87,7 @@ export async function registerAction(_prev: AuthFormState, formData: FormData): 
     throw err;
   }
 
-  const result = await signInAndRedirect(email, password, safeRedirect(formData.get("redirectTo")));
+  // A new account starts on onboarding (TC15) unless it came from a specific page.
+  const result = await signInAndRedirect(email, password, safeRedirect(formData.get("redirectTo"), "/onboarding"));
   return { ...result, values };
 }

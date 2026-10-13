@@ -1,10 +1,7 @@
+import type { Reason } from "@/lib/reason";
 import { cn } from "@/lib/utils";
 
-export type Reason =
-  | { kind: "rated"; book: string }
-  | { kind: "borrowed"; book: string }
-  | { kind: "similar-readers"; stars: number }
-  | { kind: "interest"; genre: string };
+export type { Reason };
 
 /**
  * The signature element (NFR1): a narrow strip like the slip tucked into a library book, with a
@@ -30,6 +27,12 @@ function copy(r: Reason) {
       return (
         <>
           Similar to <em>{r.book}</em> you borrowed
+        </>
+      );
+    case "similar-to":
+      return (
+        <>
+          Similar to <em>{r.book}</em>
         </>
       );
     case "similar-readers":

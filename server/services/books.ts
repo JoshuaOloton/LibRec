@@ -2,6 +2,7 @@ import { buildContentText } from "@/lib/content-text";
 import type { BookInput } from "@/lib/book-schema";
 import { prisma } from "@/server/db";
 import { regenerateAllFeatures } from "@/server/services/features";
+import { invalidateRecommenderCache } from "@/server/services/recommender-cache";
 
 export const ADMIN_PAGE_SIZE = 25;
 
@@ -20,13 +21,19 @@ export function getBook(id: number) {
   return prisma.book.findUnique({ where: { id }, select: bookDetailSelect });
 }
 
+/** Refit every BookFeature row, then drop the live recommender cache so it reloads the new vectors. */
+async function refit() {
+  await regenerateAllFeatures(prisma);
+  invalidateRecommenderCache();
+}
+
 /** FR10: add a book, then refit TF-IDF so it gets a BookFeature row (and the vocabulary stays consistent). */
 export async function createBook(input: BookInput) {
   const book = await prisma.book.create({
     data: { ...input, contentText: buildContentText(input) },
     select: { id: true },
   });
-  await regenerateAllFeatures(prisma);
+  await refit();
   return book;
 }
 
@@ -37,14 +44,14 @@ export async function updateBook(id: number, input: BookInput) {
     data: { ...input, contentText: buildContentText(input) },
     select: { id: true },
   });
-  await regenerateAllFeatures(prisma);
+  await refit();
   return book;
 }
 
 /** FR10: remove a book. Its feature row and interactions cascade; the vocabulary is refit without it. */
 export async function deleteBook(id: number) {
   await prisma.book.delete({ where: { id } });
-  await regenerateAllFeatures(prisma);
+  await refit();
 }
 
 /** Admin table: any title/author match, with interaction counts. */

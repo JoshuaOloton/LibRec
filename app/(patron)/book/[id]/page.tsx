@@ -4,9 +4,11 @@ import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { BookActions } from "@/components/book-actions";
 import { BookCover } from "@/components/book-cover";
+import { BookRow } from "@/components/shelf";
 import { genreLabel } from "@/lib/utils";
 import { getBook } from "@/server/services/books";
 import { getInteractionState } from "@/server/services/interactions";
+import { getMoreLikeThis } from "@/server/services/recommendations";
 
 type Params = Promise<{ id: string }>;
 
@@ -26,9 +28,12 @@ export default async function BookPage({ params }: { params: Params }) {
   if (!book) notFound();
 
   const session = await auth();
-  const state = session?.user ? await getInteractionState(Number(session.user.id), book.id) : null;
+  const userId = session?.user ? Number(session.user.id) : null;
+  const state = userId ? await getInteractionState(userId, book.id) : null;
+  const similar = await getMoreLikeThis(book.id, userId); // logged for signed-in patrons before it returns
 
   return (
+    <>
     <article className="grid gap-6 md:grid-cols-[240px_1fr] md:gap-10 lg:grid-cols-[300px_1fr]">
       <div className="max-w-60 md:max-w-none">
         <BookCover
@@ -76,6 +81,16 @@ export default async function BookPage({ params }: { params: Params }) {
         />
       </div>
     </article>
+
+    {similar.length > 0 && (
+      <section aria-labelledby="more-like-this" className="mt-12 space-y-4">
+        <h2 id="more-like-this" className="text-xl">
+          More like this
+        </h2>
+        <BookRow items={similar} label="Books like this one" />
+      </section>
+    )}
+    </>
   );
 }
 

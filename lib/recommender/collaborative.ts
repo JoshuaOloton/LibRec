@@ -49,28 +49,85 @@ export class CollaborativeRecommender implements Recommender {
   readonly name = "collaborative";
   private readonly byBook = new Map<number, Rater[]>();
   private readonly userMean = new Map<number, number>();
+  private readonly perUser = new Map<number, Map<number, number>>();
 
   constructor(
     ratings: Rating[],
     private readonly options: CollaborativeOptions = DEFAULT_COLLABORATIVE_OPTIONS,
   ) {
     // One rating per (user, book); the last one wins.
-    const perUser = new Map<number, Map<number, number>>();
     for (const r of ratings) {
-      let books = perUser.get(r.userId);
-      if (!books) perUser.set(r.userId, (books = new Map()));
+      let books = this.perUser.get(r.userId);
+      if (!books) this.perUser.set(r.userId, (books = new Map()));
       books.set(r.bookId, r.ratingValue);
     }
-    for (const [userId, books] of perUser) {
-      let sum = 0;
+    for (const [userId, books] of this.perUser) {
       for (const [bookId, rating] of books) {
-        sum += rating;
         let list = this.byBook.get(bookId);
         if (!list) this.byBook.set(bookId, (list = []));
         list.push({ userId, rating });
       }
-      this.userMean.set(userId, sum / books.size);
+      this.userMean.set(userId, CollaborativeRecommender.mean(books));
     }
+  }
+
+  private static mean(books: Map<number, number>): number {
+    let sum = 0;
+    for (const rating of books.values()) sum += rating;
+    return sum / books.size;
+  }
+
+  /**
+   * Add or change one patron's rating in place (the live app keeps one model and updates it, instead of refitting).
+   * Only that patron's mean and the book's rater list change; everything else is derived per request.
+   */
+  upsertRating(userId: number, bookId: number, ratingValue: number): void {
+    let books = this.perUser.get(userId);
+    if (!books) this.perUser.set(userId, (books = new Map()));
+    const had = books.has(bookId);
+    books.set(bookId, ratingValue);
+    this.userMean.set(userId, CollaborativeRecommender.mean(books));
+
+    let list = this.byBook.get(bookId);
+    if (!list) this.byBook.set(bookId, (list = []));
+    const existing = had ? list.find((r) => r.userId === userId) : undefined;
+    if (existing) existing.rating = ratingValue;
+    else list.push({ userId, rating: ratingValue });
+  }
+
+  /** How many patrons have rated the book. */
+  raterCount(bookId: number): number {
+    return this.byBook.get(bookId)?.length ?? 0;
+  }
+
+  /** Every book that has at least one rating, with its rater count. */
+  raterCounts(): Map<number, number> {
+    return new Map([...this.byBook].map(([bookId, raters]) => [bookId, raters.length]));
+  }
+
+  /**
+   * For the "why" behind a collaborative recommendation: the mean rating that the patron's neighbours gave each of
+   * the given books (and how many of them rated it). Books no neighbour rated are left out.
+   */
+  neighbourRatings(
+    history: HistoryItem[],
+    bookIds: number[],
+    context: RecommendContext = {},
+  ): Map<number, { mean: number; raters: number }> {
+    const out = new Map<number, { mean: number; raters: number }>();
+    const sims = new Set(this.neighbours(history, context).map((nb) => nb.userId));
+    if (sims.size === 0) return out;
+    for (const bookId of bookIds) {
+      let sum = 0;
+      let raters = 0;
+      for (const r of this.byBook.get(bookId) ?? []) {
+        if (!sims.has(r.userId)) continue;
+        sum += r.rating;
+        raters++;
+      }
+      if (raters > 0) out.set(bookId, { mean: sum / raters, raters });
+    }
+    return out;
   }
 
   /** The patron's explicit ratings, keyed by book. */

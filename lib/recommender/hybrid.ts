@@ -16,12 +16,19 @@ export interface HybridOptions {
   topN: number;
 }
 
-/** The weights are initial values, tuned in Cycle 4 on a validation split (DECISIONS 2026-10-13). */
-export const DEFAULT_HYBRID_OPTIONS: HybridOptions = {
+/** The pre-registered starting weights, kept for the report's comparison (DECISIONS 2026-10-13). */
+export const INITIAL_HYBRID_OPTIONS: HybridOptions = {
   contentWeight: 0.35,
   collabWeight: 0.65,
   coldStartThreshold: 3,
   topN: 10,
+};
+
+/** Weights chosen on the validation split in Cycle 4 (DECISIONS 2026-10-13); these are what the app serves. */
+export const DEFAULT_HYBRID_OPTIONS: HybridOptions = {
+  ...INITIAL_HYBRID_OPTIONS,
+  contentWeight: 0.8,
+  collabWeight: 0.2,
 };
 
 export type HybridPath = "content-only" | "weighted";

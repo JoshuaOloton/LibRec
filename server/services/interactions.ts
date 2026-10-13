@@ -1,4 +1,5 @@
 import { prisma } from "@/server/db";
+import { noteRating } from "@/server/services/recommender-cache";
 
 export const MIN_RATING = 1;
 export const MAX_RATING = 5;
@@ -24,11 +25,13 @@ export async function recordBorrow(userId: number, bookId: number) {
 /** FR3: record a rating. Re-rating updates the existing row (value and timestamp) instead of adding one. */
 export async function recordRating(userId: number, bookId: number, value: number) {
   if (!Number.isInteger(value) || value < MIN_RATING || value > MAX_RATING) throw new InvalidRatingError();
-  return prisma.interaction.upsert({
+  const row = await prisma.interaction.upsert({
     where: { userId_bookId_type: { userId, bookId, type: "RATE" } },
     create: { userId, bookId, type: "RATE", ratingValue: value },
     update: { ratingValue: value, timestamp: new Date() },
   });
+  noteRating(userId, bookId, value); // keep the live collaborative index current (no refit)
+  return row;
 }
 
 /** What this patron has already done with a book, for the detail page buttons. */

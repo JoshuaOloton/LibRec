@@ -1,6 +1,7 @@
 import { buildContentText } from "@/lib/content-text";
 import { prisma } from "@/server/db";
 import { regenerateAllFeatures } from "@/server/services/features";
+import { invalidateRecommenderCache } from "@/server/services/recommender-cache";
 
 /** Empty every table (the test schema only). Children first so foreign keys never block. */
 export async function resetDb() {
@@ -13,6 +14,7 @@ export async function resetDb() {
   await prisma.bookFeature.deleteMany();
   await prisma.book.deleteMany();
   await prisma.user.deleteMany();
+  invalidateRecommenderCache(); // the live cache must never outlive the rows it was built from
 }
 
 export const FIXTURE_BOOKS = [
@@ -31,6 +33,7 @@ export async function seedFixtureBooks() {
     books.push(await prisma.book.create({ data: { ...b, contentText: buildContentText(b) } }));
   }
   await regenerateAllFeatures(prisma);
+  invalidateRecommenderCache();
   return books;
 }
 
