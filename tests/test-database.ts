@@ -1,8 +1,10 @@
 /**
- * Integration tests never touch the dev data. They run in their own Postgres schema, named by
- * TEST_DATABASE_URL, or by default DATABASE_URL with `schema=librec_test`. The schema name must
- * contain "test" or the run is refused.
+ * Integration tests run against the local Postgres from docker-compose.yml (`npm run db:up`), in their own schema,
+ * and never against DATABASE_URL (which may be the hosted Supabase database). Set TEST_DATABASE_URL to use another
+ * database. The schema name must contain "test" or the run is refused.
  */
+export const LOCAL_DATABASE_URL = "postgresql://librec:librec@localhost:5443/librec";
+
 export function testDatabaseUrl(): string {
   try {
     process.loadEnvFile?.(".env");
@@ -10,10 +12,7 @@ export function testDatabaseUrl(): string {
     // no .env: rely on the environment
   }
   const explicit = process.env.TEST_DATABASE_URL;
-  const base = explicit ?? process.env.DATABASE_URL;
-  if (!base) throw new Error("Set TEST_DATABASE_URL (or DATABASE_URL in .env) to run the tests.");
-
-  const url = new URL(base);
+  const url = new URL(explicit ?? LOCAL_DATABASE_URL);
   if (!explicit) url.searchParams.set("schema", "librec_test");
 
   const schema = url.searchParams.get("schema") ?? "public";

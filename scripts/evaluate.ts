@@ -19,34 +19,17 @@ import {
   evaluateSeed,
   RELEVANCE_THRESHOLD,
   SEGMENTS,
-  type EvalConfig,
   type SeedResult,
 } from "@/lib/evaluation/runner";
-import { buildItemVectors, ContentRecommender, DEFAULT_CONTENT_OPTIONS } from "@/lib/recommender/content";
-import { CollaborativeRecommender, DEFAULT_COLLABORATIVE_OPTIONS } from "@/lib/recommender/collaborative";
-import { INITIAL_HYBRID_OPTIONS, HybridEngine, type Scorer } from "@/lib/recommender/hybrid";
-import { PopularRecommender } from "@/lib/recommender/popular";
+import { createEvalConfigs } from "@/lib/evaluation/configs";
+import { DEFAULT_CONTENT_OPTIONS } from "@/lib/recommender/content";
+import { DEFAULT_COLLABORATIVE_OPTIONS } from "@/lib/recommender/collaborative";
+import { INITIAL_HYBRID_OPTIONS } from "@/lib/recommender/hybrid";
 
 const ROOT = path.resolve(__dirname, "..");
 /** The validation split of seed s uses seed VALIDATION_SEED_OFFSET + s (DECISIONS 2026-10-13). */
 const VALIDATION_SEED_OFFSET = 1000;
 const SWEEP_STEPS = 10;
-
-/** Cache the last patron's scores: hybrid configurations on one partition share per-patron scoring work. */
-function lastPatron(scorer: Scorer): Scorer {
-  let key: number | undefined;
-  let value: Map<number, number> | undefined;
-  return {
-    score(history, context) {
-      if (context?.userId === undefined) return scorer.score(history, context);
-      if (key !== context.userId || !value) {
-        value = scorer.score(history, context);
-        key = context.userId;
-      }
-      return value;
-    },
-  };
-}
 
 const METRICS = [
   "users",
@@ -91,65 +74,8 @@ function main() {
     ratingValue: r.rating_value === "" ? null : Number(r.rating_value),
   }));
 
-  // TF-IDF is fitted once over the catalogue text (no interaction information; see DECISIONS 2026-10-13).
-  const { model, vectors } = buildItemVectors(books);
-  const content = new ContentRecommender(vectors, DEFAULT_CONTENT_OPTIONS);
-
-  // Per training partition: one CF model (fitted on training explicit ratings only; borrows never enter CF,
-  // DECISIONS 2026-10-13) and per-patron score caches shared by every hybrid configuration on that partition.
-  const sharedByTrain = new WeakMap<EvalInteraction[], { cf: CollaborativeRecommender; content: Scorer; collab: Scorer }>();
-  const shared = (train: EvalInteraction[]) => {
-    let s = sharedByTrain.get(train);
-    if (!s) {
-      const cf = new CollaborativeRecommender(
-        train
-          .filter((r) => r.type === "RATE" && r.ratingValue !== null)
-          .map((r) => ({ userId: r.userId, bookId: r.bookId, ratingValue: r.ratingValue! })),
-        DEFAULT_COLLABORATIVE_OPTIONS,
-      );
-      sharedByTrain.set(train, (s = { cf, content: lastPatron(content), collab: lastPatron(cf) }));
-    }
-    return s;
-  };
-  const hybridConfig = (name: string, label: string, contentWeight: number): EvalConfig => ({
-    name,
-    label,
-    baseline: false,
-    build: (train) => {
-      const s = shared(train);
-      const collabWeight = Math.round((1 - contentWeight) * 1000) / 1000; // collabWeight = 1 - contentWeight, no float noise
-      return new HybridEngine(s.content, s.collab, { contentWeight, collabWeight });
-    },
-  });
-
-  const available: Record<string, EvalConfig> = {
-    content: { name: "content", label: "Content-based (TF-IDF + cosine)", baseline: false, build: () => content },
-    collab: {
-      name: "collab",
-      label: "Collaborative (user-user Pearson)",
-      baseline: false,
-      build: (train) => shared(train).cf,
-    },
-    hybrid: hybridConfig(
-      "hybrid",
-      `Hybrid, initial weights (${INITIAL_HYBRID_OPTIONS.contentWeight} content / ${INITIAL_HYBRID_OPTIONS.collabWeight} collab)`,
-      INITIAL_HYBRID_OPTIONS.contentWeight,
-    ),
-    popular: {
-      name: "popular",
-      label: "Most popular (sanity check, NOT part of the hypothesis)",
-      baseline: true,
-      build: (train) => {
-        const readers = new Map<number, Set<number>>();
-        for (const row of train) {
-          let set = readers.get(row.bookId);
-          if (!set) readers.set(row.bookId, (set = new Set()));
-          set.add(row.userId);
-        }
-        return new PopularRecommender(new Map([...readers].map(([id, users]) => [id, users.size])));
-      },
-    },
-  };
+  // The configurations live in lib/evaluation/configs.ts, shared with scripts/significance.ts.
+  const { model, available, hybridConfig } = createEvalConfigs(books);
   const f = (a: { mean: number; std: number }, d = 4) => `${a.mean.toFixed(d)} ± ${a.std.toFixed(d)}`;
   const pct = (x: number) => (Number.isNaN(x) ? "n/a" : `${(x * 100).toFixed(1)}%`);
 

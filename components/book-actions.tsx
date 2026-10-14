@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 import { StarRating } from "@/components/star-rating";
+import { useHydrated } from "@/components/use-hydrated";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { borrowAction, rateAction } from "@/server/actions/interactions";
 
@@ -19,6 +20,7 @@ export function BookActions({ bookId, signedIn, borrowed: initialBorrowed, ratin
   const [rating, setRating] = useState(initialRating);
   const [message, setMessage] = useState<{ text: string; error?: boolean } | null>(null);
   const [pending, startTransition] = useTransition();
+  const hydrated = useHydrated(); // a Borrow tap before hydration would be lost, like a star tap
 
   useEffect(() => {
     if (!message) return;
@@ -72,7 +74,7 @@ export function BookActions({ bookId, signedIn, borrowed: initialBorrowed, ratin
   return (
     <div className="space-y-5">
       <div>
-        <Button onClick={borrow} disabled={borrowed || pending} variant={borrowed ? "secondary" : "primary"}>
+        <Button onClick={borrow} disabled={borrowed || pending || !hydrated} variant={borrowed ? "secondary" : "primary"}>
           {borrowed ? "Borrowed" : "Borrow"}
         </Button>
       </div>

@@ -50,24 +50,36 @@ test("TC15: rating popular books gives a recommendation within 3 interactions", 
   await register(page);
   let interactions = 0;
 
-  // A click that lands before React has hydrated the page is lost (the dev server is slow on a cold route), so each
-  // rating is retried until the page confirms it. Re-rating the same star is an upsert, so a retry is harmless.
+  // The stars are disabled until the page has hydrated, so Playwright's click waits for them instead of being lost.
   const groups = page.getByRole("radiogroup");
-  const rate = async (group: number, stars: number) => {
-    await expect(async () => {
-      await groups.nth(group).getByRole("radio", { name: `${stars} stars` }).click();
-      await expect(page.getByRole("status")).toContainText(`Rated ${stars}★`, { timeout: 3_000 });
-    }).toPass({ timeout: 30_000 });
-  };
-  await rate(0, 4);
+  await groups.nth(0).getByRole("radio", { name: "4 stars" }).click();
   interactions++;
-  await rate(1, 5);
+  await expect(page.getByRole("status")).toContainText("Rated 4★");
+  await groups.nth(1).getByRole("radio", { name: "5 stars" }).click();
   interactions++;
+  await expect(page.getByRole("status")).toContainText("Rated 5★");
   await page.getByRole("link", { name: "Go to Your shelf" }).click();
   interactions++;
 
   await expectShelfWithReasons(page, /^Because you rated /);
   expect(interactions).toBeLessThanOrEqual(3);
+});
+
+test("star ratings are disabled until the page can handle a tap (no taps are silently lost)", async ({ page, browser }) => {
+  await register(page);
+  const state = await page.context().storageState();
+
+  // Without JavaScript the page never hydrates: the server-rendered stars must already be disabled.
+  const noJs = await browser.newContext({ storageState: state, javaScriptEnabled: false });
+  const bare = await noJs.newPage();
+  await bare.goto(new URL("/onboarding", page.url()).toString());
+  const stars = bare.getByRole("radiogroup").first().getByRole("radio");
+  await expect(stars).toHaveCount(5);
+  for (const star of await stars.all()) await expect(star).toBeDisabled();
+  await noJs.close();
+
+  // With JavaScript they become usable once hydrated.
+  await expect(page.getByRole("radiogroup").first().getByRole("radio", { name: "3 stars" })).toBeEnabled();
 });
 
 test("a patron with no history who opens Your shelf is sent to onboarding", async ({ page }) => {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useHydrated } from "@/components/use-hydrated";
 import { cn } from "@/lib/utils";
 
 function Star({ filled, className }: { filled: boolean; className?: string }) {
@@ -34,6 +35,8 @@ type Props = {
 export function StarRating({ value = 0, onChange, readOnly = false, label = "Rating", className }: Props) {
   const [hover, setHover] = useState(0);
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
+  // Taps before hydration would be lost, so the stars stay disabled until the page can handle them.
+  const hydrated = useHydrated();
 
   if (readOnly) {
     return (
@@ -62,11 +65,12 @@ export function StarRating({ value = 0, onChange, readOnly = false, label = "Rat
           }}
           type="button"
           role="radio"
+          disabled={!hydrated}
           aria-checked={value === n}
           aria-label={`${n} star${n > 1 ? "s" : ""}`}
           // Roving tabindex: the selected star (or the first, when unrated) is the tab stop.
           tabIndex={value === n || (value === 0 && n === 1) ? 0 : -1}
-          className="grid size-11 place-items-center rounded-md"
+          className="grid size-11 place-items-center rounded-md disabled:cursor-not-allowed disabled:opacity-50"
           onMouseEnter={() => setHover(n)}
           onClick={() => onChange?.(n)}
           onKeyDown={(e) => {

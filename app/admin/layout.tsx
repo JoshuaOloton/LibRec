@@ -16,6 +16,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               Books
             </Link>
           </li>
+          <li>
+            <Link
+              href="/admin/statistics"
+              className="inline-flex min-h-11 w-full items-center rounded-md px-3 font-bold hover:bg-surface"
+            >
+              Statistics
+            </Link>
+          </li>
         </ul>
       </nav>
       <div className="min-w-0">{children}</div>

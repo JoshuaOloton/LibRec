@@ -1,0 +1,542 @@
+{
+  "generatedAt": "2026-10-14T13:28:38.010Z",
+  "n": 10,
+  "seeds": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "alpha": 0.05,
+  "tunedContentWeight": 0.8,
+  "protocol": {
+    "quantity": "per-patron F1@N, difference = first - second, over the patrons evaluated in that seed (same patrons for both)",
+    "segments": {
+      "all": "every evaluated patron",
+      "warm": "patrons with >= 3 distinct training books (in the cold segment the hybrid equals content by construction)"
+    },
+    "perSeed": "Wilcoxon signed-rank, normal approximation, tie-corrected variance, continuity correction, zeros dropped, two-sided; Holm-adjusted across the three comparisons within a seed and segment",
+    "acrossSeeds": "paired t-test on the per-seed mean differences, two-sided; Holm-adjusted across the three comparisons",
+    "effectSizes": "rank-biserial correlation (Wilcoxon, positive favours the first); Cohen's d_z (t-test)",
+    "decisionRule": "reject H0 against a baseline only if the hybrid is better (positive mean difference) and the Holm-adjusted Wilcoxon p < alpha in all seeds; the t-test is a robustness check"
+  },
+  "reproducesFinal": {
+    "content": 0,
+    "collab": 0,
+    "hybrid": 0,
+    "hybrid-tuned": 0
+  },
+  "seedMeans": {
+    "content": [
+      0.04965588221088936,
+      0.05091691967615753,
+      0.05087167007415132,
+      0.05038383886402428,
+      0.049063720425949996
+    ],
+    "collab": [
+      0.011211130695489324,
+      0.011844287132492857,
+      0.011715925724606764,
+      0.01164670486061764,
+      0.01041251067566858
+    ],
+    "hybrid": [
+      0.0445282225854001,
+      0.04482230691216839,
+      0.04630486167047071,
+      0.04640033997350933,
+      0.04416876111922596
+    ],
+    "hybrid-tuned": [
+      0.053260993359781426,
+      0.054755907020908975,
+      0.05582540095405226,
+      0.05580223937963532,
+      0.054253350615580176
+    ]
+  },
+  "comparisons": {
+    "tuned-vs-content/all": {
+      "label": "Hybrid (tuned 0.8/0.2) vs content-based",
+      "first": "hybrid-tuned",
+      "second": "content",
+      "segment": "all",
+      "perSeed": [
+        {
+          "seed": 1,
+          "n": 222,
+          "zeros": 3315,
+          "wPlus": 17249.5,
+          "wMinus": 7503.5,
+          "z": 5.103576313222323,
+          "p": 3.332940193861334e-7,
+          "rankBiserial": 0.39373005292287805,
+          "meanDiff": 0.003605111148892016,
+          "pHolm": 6.665880387722668e-7
+        },
+        {
+          "seed": 2,
+          "n": 219,
+          "zeros": 3363,
+          "wPlus": 17469,
+          "wMinus": 6621,
+          "z": 5.7990349884288,
+          "p": 6.669761676572825e-9,
+          "rankBiserial": 0.45031133250311334,
+          "meanDiff": 0.0038389873447514542,
+          "pHolm": 1.333952335314565e-8
+        },
+        {
+          "seed": 3,
+          "n": 248,
+          "zeros": 3323,
+          "wPlus": 23559,
+          "wMinus": 7317,
+          "z": 7.203425398332699,
+          "p": 5.871841422448793e-13,
+          "rankBiserial": 0.5260396424407306,
+          "meanDiff": 0.004953730879900841,
+          "pHolm": 1.1743682844897587e-12
+        },
+        {
+          "seed": 4,
+          "n": 245,
+          "zeros": 3304,
+          "wPlus": 23119.5,
+          "wMinus": 7015.5,
+          "z": 7.276408010956703,
+          "p": 3.428256901254016e-13,
+          "rankBiserial": 0.5343952215032355,
+          "meanDiff": 0.0054184005156109934,
+          "pHolm": 6.856513802508032e-13
+        },
+        {
+          "seed": 5,
+          "n": 241,
+          "zeros": 3274,
+          "wPlus": 22004,
+          "wMinus": 7157,
+          "z": 6.875007286201441,
+          "p": 6.198669070596245e-12,
+          "rankBiserial": 0.5091389184184356,
+          "meanDiff": 0.005189630189630183,
+          "pHolm": 1.239733814119249e-11
+        }
+      ],
+      "acrossSeeds": {
+        "n": 5,
+        "meanDiff": 0.004601172015757134,
+        "sd": 0.0008233325450985574,
+        "t": 12.496206380583548,
+        "df": 4,
+        "p": 0.000235896326345473,
+        "dz": 5.588473385570285,
+        "pHolm": 0.0002880039328897767
+      },
+      "verdict": "first significantly better in every seed",
+      "significantInSeeds": 5
+    },
+    "tuned-vs-collab/all": {
+      "label": "Hybrid (tuned 0.8/0.2) vs collaborative",
+      "first": "hybrid-tuned",
+      "second": "collab",
+      "segment": "all",
+      "perSeed": [
+        {
+          "seed": 1,
+          "n": 988,
+          "zeros": 2549,
+          "wPlus": 456576.5,
+          "wMinus": 31989.5,
+          "z": 23.889325048647535,
+          "p": 3.954398057899555e-126,
+          "rankBiserial": 0.8690473753801943,
+          "meanDiff": 0.04204986266429197,
+          "pHolm": 1.1863194173698664e-125
+        },
+        {
+          "seed": 2,
+          "n": 1015,
+          "zeros": 2567,
+          "wPlus": 480100.5,
+          "wMinus": 35519.5,
+          "z": 23.99191258414604,
+          "p": 3.377494413388359e-127,
+          "rankBiserial": 0.8622260579496528,
+          "meanDiff": 0.04291161988841597,
+          "pHolm": 1.0132483240165078e-126
+        },
+        {
+          "seed": 3,
+          "n": 1008,
+          "zeros": 2563,
+          "wPlus": 484391,
+          "wMinus": 24145,
+          "z": 25.122173225867396,
+          "p": 2.847421018548182e-139,
+          "rankBiserial": 0.9050411376972328,
+          "meanDiff": 0.04410947522944534,
+          "pHolm": 8.542263055644546e-139
+        },
+        {
+          "seed": 4,
+          "n": 1014,
+          "zeros": 2535,
+          "wPlus": 482243.5,
+          "wMinus": 32361.5,
+          "z": 24.330728110791796,
+          "p": 9.274497111731048e-131,
+          "rankBiserial": 0.8742278057927926,
+          "meanDiff": 0.04415553451901754,
+          "pHolm": 2.7823491335193146e-130
+        },
+        {
+          "seed": 5,
+          "n": 971,
+          "zeros": 2544,
+          "wPlus": 447899,
+          "wMinus": 24007,
+          "z": 24.472075584694235,
+          "p": 2.930003602593763e-132,
+          "rankBiserial": 0.8982551609854504,
+          "meanDiff": 0.043840839939911586,
+          "pHolm": 8.79001080778129e-132
+        }
+      ],
+      "acrossSeeds": {
+        "n": 5,
+        "meanDiff": 0.0434134664482166,
+        "sd": 0.0009122782738521362,
+        "t": 106.4099243613609,
+        "df": 4,
+        "p": 4.6769966287274656e-8,
+        "dz": 47.58796487052276,
+        "pHolm": 1.4030989886182396e-7
+      },
+      "verdict": "first significantly better in every seed",
+      "significantInSeeds": 5
+    },
+    "initial-vs-content/all": {
+      "label": "Hybrid (initial 0.35/0.65) vs content-based",
+      "first": "hybrid",
+      "second": "content",
+      "segment": "all",
+      "perSeed": [
+        {
+          "seed": 1,
+          "n": 481,
+          "zeros": 3056,
+          "wPlus": 44969,
+          "wMinus": 70952,
+          "z": -4.273927545574835,
+          "p": 0.00001920594694877423,
+          "rankBiserial": -0.22414402912328224,
+          "meanDiff": -0.005127659625489289,
+          "pHolm": 0.00001920594694877423
+        },
+        {
+          "seed": 2,
+          "n": 513,
+          "zeros": 3069,
+          "wPlus": 49796.5,
+          "wMinus": 82044.5,
+          "z": -4.814466375651627,
+          "p": 0.0000014759375141169732,
+          "rankBiserial": -0.24459765930173466,
+          "meanDiff": -0.006094612763989054,
+          "pHolm": 0.0000014759375141169732
+        },
+        {
+          "seed": 3,
+          "n": 495,
+          "zeros": 3076,
+          "wPlus": 50100,
+          "wMinus": 72660,
+          "z": -3.5546878398706374,
+          "p": 0.0003784280893243453,
+          "rankBiserial": -0.18377321603128055,
+          "meanDiff": -0.00456680840368059,
+          "pHolm": 0.0003784280893243453
+        },
+        {
+          "seed": 4,
+          "n": 468,
+          "zeros": 3081,
+          "wPlus": 44691,
+          "wMinus": 65055,
+          "z": -3.490306932811426,
+          "p": 0.00048246608017055154,
+          "rankBiserial": -0.18555573779454376,
+          "meanDiff": -0.003983498890514951,
+          "pHolm": 0.00048246608017055154
+        },
+        {
+          "seed": 5,
+          "n": 486,
+          "zeros": 3029,
+          "wPlus": 46840,
+          "wMinus": 71501,
+          "z": -3.994132736807107,
+          "p": 0.00006493148212902551,
+          "rankBiserial": -0.2083893156218048,
+          "meanDiff": -0.004894959306724008,
+          "pHolm": 0.00006493148212902551
+        }
+      ],
+      "acrossSeeds": {
+        "n": 5,
+        "meanDiff": -0.004933507798079599,
+        "sd": 0.0007785131711212172,
+        "t": -14.170163348865966,
+        "df": 4,
+        "p": 0.00014400196644488836,
+        "dz": -6.3370897000680735,
+        "pHolm": 0.0002880039328897767
+      },
+      "verdict": "first significantly worse in every seed",
+      "significantInSeeds": 5
+    },
+    "tuned-vs-content/warm": {
+      "label": "Hybrid (tuned 0.8/0.2) vs content-based",
+      "first": "hybrid-tuned",
+      "second": "content",
+      "segment": "warm",
+      "perSeed": [
+        {
+          "seed": 1,
+          "n": 222,
+          "zeros": 3096,
+          "wPlus": 17249.5,
+          "wMinus": 7503.5,
+          "z": 5.103576313222323,
+          "p": 3.332940193861334e-7,
+          "rankBiserial": 0.39373005292287805,
+          "meanDiff": 0.003843061523095558,
+          "pHolm": 6.665880387722668e-7
+        },
+        {
+          "seed": 2,
+          "n": 219,
+          "zeros": 3153,
+          "wPlus": 17469,
+          "wMinus": 6621,
+          "z": 5.7990349884288,
+          "p": 6.669761676572825e-9,
+          "rankBiserial": 0.45031133250311334,
+          "meanDiff": 0.004078070186506438,
+          "pHolm": 1.333952335314565e-8
+        },
+        {
+          "seed": 3,
+          "n": 248,
+          "zeros": 3101,
+          "wPlus": 23559,
+          "wMinus": 7317,
+          "z": 7.203425398332699,
+          "p": 5.871841422448793e-13,
+          "rankBiserial": 0.5260396424407306,
+          "meanDiff": 0.005282105993468469,
+          "pHolm": 1.1743682844897587e-12
+        },
+        {
+          "seed": 4,
+          "n": 245,
+          "zeros": 3095,
+          "wPlus": 23119.5,
+          "wMinus": 7015.5,
+          "z": 7.276408010956703,
+          "p": 3.428256901254016e-13,
+          "rankBiserial": 0.5343952215032355,
+          "meanDiff": 0.0057574561167375495,
+          "pHolm": 6.856513802508032e-13
+        },
+        {
+          "seed": 5,
+          "n": 241,
+          "zeros": 3054,
+          "wPlus": 22004,
+          "wMinus": 7157,
+          "z": 6.875007286201441,
+          "p": 6.198669070596245e-12,
+          "rankBiserial": 0.5091389184184356,
+          "meanDiff": 0.005536130536130529,
+          "pHolm": 1.239733814119249e-11
+        }
+      ],
+      "acrossSeeds": {
+        "n": 5,
+        "meanDiff": 0.004899364871187757,
+        "sd": 0.0008772946464416069,
+        "t": 12.487609428583827,
+        "df": 4,
+        "p": 0.0002365330221167751,
+        "dz": 5.584628711756149,
+        "pHolm": 0.0002833231349579094
+      },
+      "verdict": "first significantly better in every seed",
+      "significantInSeeds": 5
+    },
+    "tuned-vs-collab/warm": {
+      "label": "Hybrid (tuned 0.8/0.2) vs collaborative",
+      "first": "hybrid-tuned",
+      "second": "collab",
+      "segment": "warm",
+      "perSeed": [
+        {
+          "seed": 1,
+          "n": 929,
+          "zeros": 2389,
+          "wPlus": 400762.5,
+          "wMinus": 31222.5,
+          "z": 22.757533960025803,
+          "p": 1.2085428797763341e-114,
+          "rankBiserial": 0.8554463696656134,
+          "meanDiff": 0.041592251813239264,
+          "pHolm": 3.625628639329003e-114
+        },
+        {
+          "seed": 2,
+          "n": 963,
+          "zeros": 2409,
+          "wPlus": 429270.5,
+          "wMinus": 34895.5,
+          "z": 22.991613343708636,
+          "p": 5.6548301171666154e-117,
+          "rankBiserial": 0.8496421538846016,
+          "meanDiff": 0.042780212629229084,
+          "pHolm": 1.6964490351499846e-116
+        },
+        {
+          "seed": 3,
+          "n": 952,
+          "zeros": 2397,
+          "wPlus": 429931,
+          "wMinus": 23697,
+          "z": 24.112840543022926,
+          "p": 1.8332749464686063e-128,
+          "rankBiserial": 0.89552232225524,
+          "meanDiff": 0.04399316747164257,
+          "pHolm": 5.499824839405819e-128
+        },
+        {
+          "seed": 4,
+          "n": 965,
+          "zeros": 2375,
+          "wPlus": 434321.5,
+          "wMinus": 31773.5,
+          "z": 23.412564010394384,
+          "p": 3.183048067814149e-121,
+          "rankBiserial": 0.8636608416739077,
+          "meanDiff": 0.04425116799368333,
+          "pHolm": 9.549144203442447e-121
+        },
+        {
+          "seed": 5,
+          "n": 914,
+          "zeros": 2381,
+          "wPlus": 394604,
+          "wMinus": 23551,
+          "z": 23.410060496686537,
+          "p": 3.375543472054029e-121,
+          "rankBiserial": 0.8873575587999665,
+          "meanDiff": 0.0436227362747049,
+          "pHolm": 1.0126630416162088e-120
+        }
+      ],
+      "acrossSeeds": {
+        "n": 5,
+        "meanDiff": 0.04324790723649995,
+        "sd": 0.0010796266599053274,
+        "t": 89.57287186099967,
+        "df": 4,
+        "p": 9.312890161206278e-8,
+        "dz": 40.05820608421467,
+        "pHolm": 2.7938670483618836e-7
+      },
+      "verdict": "first significantly better in every seed",
+      "significantInSeeds": 5
+    },
+    "initial-vs-content/warm": {
+      "label": "Hybrid (initial 0.35/0.65) vs content-based",
+      "first": "hybrid",
+      "second": "content",
+      "segment": "warm",
+      "perSeed": [
+        {
+          "seed": 1,
+          "n": 481,
+          "zeros": 2837,
+          "wPlus": 44969,
+          "wMinus": 70952,
+          "z": -4.273927545574835,
+          "p": 0.00001920594694877423,
+          "rankBiserial": -0.22414402912328224,
+          "meanDiff": -0.005466103705652687,
+          "pHolm": 0.00001920594694877423
+        },
+        {
+          "seed": 2,
+          "n": 513,
+          "zeros": 2859,
+          "wPlus": 49796.5,
+          "wMinus": 82044.5,
+          "z": -4.814466375651627,
+          "p": 0.0000014759375141169732,
+          "rankBiserial": -0.24459765930173466,
+          "meanDiff": -0.0064741704984011845,
+          "pHolm": 0.0000014759375141169732
+        },
+        {
+          "seed": 3,
+          "n": 495,
+          "zeros": 2854,
+          "wPlus": 50100,
+          "wMinus": 72660,
+          "z": -3.5546878398706374,
+          "p": 0.0003784280893243453,
+          "rankBiserial": -0.18377321603128055,
+          "meanDiff": -0.004869535028230333,
+          "pHolm": 0.0003784280893243453
+        },
+        {
+          "seed": 4,
+          "n": 468,
+          "zeros": 2872,
+          "wPlus": 44691,
+          "wMinus": 65055,
+          "z": -3.490306932811426,
+          "p": 0.00048246608017055154,
+          "rankBiserial": -0.18555573779454376,
+          "meanDiff": -0.004232765737256754,
+          "pHolm": 0.00048246608017055154
+        },
+        {
+          "seed": 5,
+          "n": 486,
+          "zeros": 2809,
+          "wPlus": 46840,
+          "wMinus": 71501,
+          "z": -3.994132736807107,
+          "p": 0.00006493148212902551,
+          "rankBiserial": -0.2083893156218048,
+          "meanDiff": -0.00522178511779511,
+          "pHolm": 0.00006493148212902551
+        }
+      ],
+      "acrossSeeds": {
+        "n": 5,
+        "meanDiff": -0.005252872017467232,
+        "sd": 0.0008254647475742729,
+        "t": -14.22929197482942,
+        "df": 4,
+        "p": 0.0001416615674789547,
+        "dz": -6.363532825482161,
+        "pHolm": 0.0002833231349579094
+      },
+      "verdict": "first significantly worse in every seed",
+      "significantInSeeds": 5
+    }
+  }
+}

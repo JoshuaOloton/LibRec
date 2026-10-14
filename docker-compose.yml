@@ -1,0 +1,25 @@
+# Local Postgres for development and tests (Vitest and Playwright). Deployment uses a hosted database (Supabase).
+#   npm run db:up      start it (waits until it is ready)
+#   npm run db:down    stop it (data is kept in the volume)
+# Port 5443 (not 5432) so it does not clash with a Postgres already installed on the machine.
+services:
+  db:
+    image: postgres:15
+    ports:
+      - "5443:5432"
+    environment:
+      POSTGRES_USER: librec
+      POSTGRES_PASSWORD: librec
+      POSTGRES_DB: librec
+    # Throwaway dev/test data: skip fsync for speed. Never use these flags for a database you care about.
+    command: ["postgres", "-c", "fsync=off", "-c", "synchronous_commit=off", "-c", "full_page_writes=off"]
+    volumes:
+      - librec-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U librec -d librec"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  librec-pgdata:

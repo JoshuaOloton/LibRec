@@ -21,6 +21,8 @@ export interface EvalConfig {
 
 export interface EvalOptions {
   n: number;
+  /** Also return each evaluated patron's F1 per configuration (for paired significance tests). Off by default. */
+  collectPatrons?: boolean;
   split?: SplitOptions;
   coldStartThreshold?: number;
 }
@@ -57,6 +59,11 @@ export interface SeedResult {
   /** Test patrons with no relevant held-out book, left out of the metrics. */
   skippedUsers: number;
   configs: Record<string, Record<Segment, SegmentSummary>>;
+  /**
+   * Only with `collectPatrons`: the evaluated patrons (ascending id) and, per configuration, each one's F1@N in the
+   * same order, so two configurations can be paired by patron. `cold[i]` is true when patron i is in the cold segment.
+   */
+  patrons?: { userIds: number[]; cold: boolean[]; f1: Record<string, number[]> };
 }
 
 export interface Aggregate {
@@ -154,8 +161,10 @@ export function evaluatePartition(
 
   // Patron-outer, configuration-inner: results are identical to a configuration-outer loop (recommenders are
   // stateless per patron), and configurations that share per-patron scoring can cache the last patron's scores.
+  const cold: boolean[] = [];
   for (const userId of evaluated) {
     const history = buildHistory(trainByUser.get(userId) ?? []);
+    cold.push(history.length < threshold);
     for (const { recommender, rows } of built) {
       const items = recommender.recommend(history, options.n, { userId });
       const recs = items.map((r) => r.bookId);
@@ -179,6 +188,15 @@ export function evaluatePartition(
         }
       }
     }
+  }
+
+  if (options.collectPatrons) {
+    result.patrons = {
+      userIds: evaluated,
+      cold,
+      // rows.all holds one entry per evaluated patron, in the loop's order
+      f1: Object.fromEntries(built.map(({ config, rows }) => [config.name, rows.all.f])),
+    };
   }
 
   for (const { config, rows } of built) {
