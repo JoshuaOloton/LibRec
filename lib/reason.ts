@@ -6,8 +6,24 @@ export type Reason =
   | { kind: "similar-readers"; stars: number }
   | { kind: "interest"; genre: string };
 
-/** Plain-text form, stored in RecommendationLog.reason. The reason slip renders the same words with the title in italics. */
-export function reasonText(r: Reason): string {
+/** Weighted-path items whose CF prediction is at least this get the second line (DECISIONS 2026-10-13). */
+export const ALSO_RATED_MIN = 4.0;
+
+/** "Readers with similar taste also rated this 4.3★": the CF prediction, one decimal, shown at most 5.0. */
+export function alsoRatedText(prediction: number): string {
+  return `Readers with similar taste also rated this ${Math.min(5, prediction).toFixed(1)}★`;
+}
+
+/**
+ * Plain-text form, stored in RecommendationLog.reason: the main reason, then the second line when there is one.
+ * The reason slip renders the same words with the title in italics.
+ */
+export function reasonText(r: Reason, alsoRated?: number): string {
+  const main = mainText(r);
+  return alsoRated === undefined ? main : `${main}\n${alsoRatedText(alsoRated)}`;
+}
+
+function mainText(r: Reason): string {
   switch (r.kind) {
     case "rated":
       return `Because you rated ${r.book}`;

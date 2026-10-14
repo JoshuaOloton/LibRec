@@ -1,7 +1,7 @@
 import { buildHistory } from "@/lib/recommender/history";
 import { topN } from "@/lib/recommender/ranking";
 import type { HistoryItem } from "@/lib/recommender/types";
-import { reasonText, type Reason } from "@/lib/reason";
+import { ALSO_RATED_MIN, reasonText, type Reason } from "@/lib/reason";
 import { genreLabel } from "@/lib/utils";
 import { prisma } from "@/server/db";
 import { getSnapshot, type BookMeta, type Snapshot } from "@/server/services/recommender-cache";
@@ -14,6 +14,11 @@ export type ServedSource = "CONTENT" | "COLLABORATIVE";
 export interface ServedItem {
   book: BookMeta;
   reason: Reason;
+  /**
+   * Weighted path only: the CF prediction (>= ALSO_RATED_MIN) for a content-attributed item, shown as the slip's
+   * second line. Display only: ranking, score, source and the rest of the reason are unaffected.
+   */
+  alsoRated?: number;
   source: ServedSource;
   score: number;
   /** Position in the served list, from 1. */
@@ -57,7 +62,7 @@ async function logServed(userId: number, items: ServedItem[]) {
       sourceComponent: i.source,
       score: i.score,
       rank: i.rank,
-      reason: reasonText(i.reason),
+      reason: reasonText(i.reason, i.alsoRated),
     })),
   });
 }
@@ -97,6 +102,8 @@ export async function getShelf(userId: number, pickedGenres: string[] = [], n: n
   const recs = s.engine.recommend(history, n, { userId });
   const collabIds = recs.filter((r) => r.source === "COLLABORATIVE").map((r) => r.bookId);
   const neighbourRatings = collabIds.length ? s.collab.neighbourRatings(history, collabIds, { userId }) : new Map();
+  // Raw CF predictions, for the second slip line only (the engine already used them for the ranking).
+  const predictions = path === "weighted" ? s.collab.score(history, { userId }) : new Map<number, number>();
 
   const items: ServedItem[] = [];
   for (const r of recs) {
@@ -108,7 +115,10 @@ export async function getShelf(userId: number, pickedGenres: string[] = [], n: n
       source === "COLLABORATIVE" && given
         ? { kind: "similar-readers", stars: Math.min(5, Math.max(1, Math.round(given.mean))) }
         : contentReason(s, history, book);
-    items.push({ book, reason, source, score: r.score, rank: items.length + 1 });
+    // A collaborative-attributed item already says what similar readers rated it, so only content items get the line.
+    const prediction = source === "CONTENT" ? predictions.get(r.bookId) : undefined;
+    const alsoRated = prediction !== undefined && prediction >= ALSO_RATED_MIN ? prediction : undefined;
+    items.push({ book, reason, alsoRated, source, score: r.score, rank: items.length + 1 });
   }
   await logServed(userId, items);
   return { kind: "ready", path, items, basedOn: history.length, genres: [] };

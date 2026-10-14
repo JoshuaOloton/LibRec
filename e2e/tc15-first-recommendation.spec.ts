@@ -50,13 +50,19 @@ test("TC15: rating popular books gives a recommendation within 3 interactions", 
   await register(page);
   let interactions = 0;
 
+  // A click that lands before React has hydrated the page is lost (the dev server is slow on a cold route), so each
+  // rating is retried until the page confirms it. Re-rating the same star is an upsert, so a retry is harmless.
   const groups = page.getByRole("radiogroup");
-  await groups.nth(0).getByRole("radio", { name: "4 stars" }).click();
+  const rate = async (group: number, stars: number) => {
+    await expect(async () => {
+      await groups.nth(group).getByRole("radio", { name: `${stars} stars` }).click();
+      await expect(page.getByRole("status")).toContainText(`Rated ${stars}★`, { timeout: 3_000 });
+    }).toPass({ timeout: 30_000 });
+  };
+  await rate(0, 4);
   interactions++;
-  await expect(page.getByRole("status")).toContainText("Rated 4★");
-  await groups.nth(1).getByRole("radio", { name: "5 stars" }).click();
+  await rate(1, 5);
   interactions++;
-  await expect(page.getByRole("status")).toContainText("Rated 5★");
   await page.getByRole("link", { name: "Go to Your shelf" }).click();
   interactions++;
 

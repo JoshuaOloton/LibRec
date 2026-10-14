@@ -9,6 +9,8 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   reporter: "list",
+  // The database is remote and `next dev` compiles each route on first use, so a cold test can take a while.
+  timeout: 90_000,
   // `next dev` compiles a route the first time it is hit, which can take longer than the 5s default.
   expect: { timeout: 15_000 },
   use: { baseURL: `http://localhost:${PORT}`, trace: "retain-on-failure" },

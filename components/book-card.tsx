@@ -15,6 +15,8 @@ type Props = {
   book: BookSummary;
   /** Present on recommendations; the slip sits directly under the cover. */
   reason?: Reason;
+  /** CF prediction (>= 4.0) for the slip's second line. */
+  alsoRated?: number;
   /** Larger treatment with the brass marker, for the first pick on Your shelf. */
   topPick?: boolean;
   priority?: boolean;
@@ -22,7 +24,7 @@ type Props = {
 };
 
 /** Cover on the paper, no box, border or shadow (STYLE.md). Reason slip, title, author below. */
-export function BookCard({ book, reason, topPick = false, priority, className }: Props) {
+export function BookCard({ book, reason, alsoRated, topPick = false, priority, className }: Props) {
   return (
     <article className={cn("flex flex-col", className)}>
       <Link href={`/book/${book.id}`} className="group block rounded-cover">
@@ -43,7 +45,7 @@ export function BookCard({ book, reason, topPick = false, priority, className }:
           </span>
         )}
       </Link>
-      {reason && <ReasonSlip reason={reason} className="mt-2" />}
+      {reason && <ReasonSlip reason={reason} alsoRated={alsoRated} className="mt-2" />}
       <h3 className="mt-2 text-base leading-snug font-medium">
         <Link href={`/book/${book.id}`} className="hover:underline">
           {book.title}

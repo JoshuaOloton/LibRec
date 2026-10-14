@@ -97,6 +97,72 @@ describe("TC11 logging (FR9)", () => {
     expect(shelf.items.some((i) => i.source === "CONTENT")).toBe(true);
   });
 
+  describe("second line: readers also rated this (CF prediction >= 4.0)", () => {
+    /** A neighbour who rated Starship Mathematics (content-close to the patron's books) as `starship`. */
+    async function neighbourWithStarship(starship: number) {
+      const q = await seedNeighbour(5);
+      await recordRating(q, books[4].id, starship);
+    }
+
+    it("adds the prediction (one decimal) to a content-attributed item, and logs both lines", async () => {
+      await neighbourWithStarship(5);
+      await ratePatron();
+      const shelf = await getShelf(patron);
+      if (shelf.kind !== "ready") throw new Error("expected a shelf");
+
+      // Hand-computed: patron mean (5+4+2)/3 = 3.667; neighbour mean (5+4+2+5+5)/5 = 4.2, so pred = 3.667 + (5 - 4.2) = 4.467.
+      const starship = shelf.items.find((i) => i.book.id === books[4].id)!;
+      expect(starship.source).toBe("CONTENT");
+      expect(starship.alsoRated).toBeCloseTo(4.4667, 3);
+
+      const row = (await logs(patron)).find((r) => r.bookId === books[4].id)!;
+      expect(row.sourceComponent).toBe("CONTENT");
+      expect(row.reason).toBe(`${reasonText(starship.reason)}\nReaders with similar taste also rated this 4.5★`);
+    });
+
+    it("adds nothing below 4.0, and nothing to a collaborative-attributed item", async () => {
+      await neighbourWithStarship(1); // neighbour mean 3.4; pred = 3.667 + (1 - 3.4) = 1.27
+      await ratePatron();
+      const shelf = await getShelf(patron);
+      if (shelf.kind !== "ready") throw new Error("expected a shelf");
+
+      expect(shelf.items.find((i) => i.book.id === books[4].id)!.alsoRated).toBeUndefined();
+      const kitchen = shelf.items.find((i) => i.book.id === books[5].id)!; // predicted high, but attributed to CF
+      expect(kitchen.source).toBe("COLLABORATIVE");
+      expect(kitchen.alsoRated).toBeUndefined();
+      expect((await logs(patron)).some((r) => r.reason?.includes("\n"))).toBe(false);
+    });
+
+    it("leaves ranking, scores and sources unchanged and never appears on the content-only path", async () => {
+      await neighbourWithStarship(5);
+      await ratePatron();
+      const withLine = await getShelf(patron);
+      const { engine } = await getSnapshot();
+      const history = [
+        { bookId: books[0].id, ratingValue: 5 },
+        { bookId: books[1].id, ratingValue: 4 },
+        { bookId: books[2].id, ratingValue: 2 },
+      ];
+      const recs = engine.recommend(history, 10, { userId: patron });
+      if (withLine.kind !== "ready") throw new Error("expected a shelf");
+      expect(withLine.items.map((i) => [i.book.id, i.score, i.source])).toEqual(recs.map((r) => [r.bookId, r.score, r.source]));
+
+      const cold = (await createPatron("cold@example.com")).id;
+      await recordRating(cold, books[0].id, 5);
+      const coldShelf = await getShelf(cold);
+      if (coldShelf.kind !== "ready") throw new Error("expected a shelf");
+      expect(coldShelf.path).toBe("content-only");
+      expect(coldShelf.items.every((i) => i.alsoRated === undefined)).toBe(true);
+    });
+
+    it("formats the line from the prediction, capped at 5.0", () => {
+      expect(reasonText({ kind: "rated", book: "X" }, 4.0)).toBe("Because you rated X\nReaders with similar taste also rated this 4.0★");
+      expect(reasonText({ kind: "rated", book: "X" }, 4.26)).toBe("Because you rated X\nReaders with similar taste also rated this 4.3★");
+      expect(reasonText({ kind: "rated", book: "X" }, 5.8)).toBe("Because you rated X\nReaders with similar taste also rated this 5.0★");
+      expect(reasonText({ kind: "rated", book: "X" })).toBe("Because you rated X");
+    });
+  });
+
   it("logs each refresh as its own batch of rows", async () => {
     await recordRating(patron, books[0].id, 5);
     const first = await getShelf(patron);

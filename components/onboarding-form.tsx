@@ -35,7 +35,7 @@ export function OnboardingForm({ genres, popular }: { genres: Genre[]; popular: 
     const previous = ratings[book.id];
     setRatings((r) => ({ ...r, [book.id]: value })); // optimistic; rolled back on failure
     startTransition(async () => {
-      const result = await rateAction(book.id, value);
+      const result = await rateAction(book.id, value, { refreshShelf: false });
       if (result.ok) {
         setMessage({ text: `Rated ${value}★. Your shelf will use it.` });
       } else {

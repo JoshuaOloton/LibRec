@@ -26,7 +26,15 @@ export async function borrowAction(bookId: number): Promise<InteractionResult> {
   return { ok: true };
 }
 
-export async function rateAction(bookId: number, value: number): Promise<InteractionResult> {
+/**
+ * `refreshShelf: false` is for onboarding: revalidating makes the server re-render the page the patron is on, and
+ * /onboarding redirects anyone with a history to Your shelf, which would cut "rate a few books" short after one.
+ */
+export async function rateAction(
+  bookId: number,
+  value: number,
+  { refreshShelf = true }: { refreshShelf?: boolean } = {},
+): Promise<InteractionResult> {
   const userId = await patronId();
   if (!userId) return { ok: false, error: NOT_SIGNED_IN };
   try {
@@ -34,6 +42,6 @@ export async function rateAction(bookId: number, value: number): Promise<Interac
   } catch (err) {
     return { ok: false, error: err instanceof InvalidRatingError ? err.message : FAILED };
   }
-  revalidatePath("/recommendations");
+  if (refreshShelf) revalidatePath("/recommendations");
   return { ok: true };
 }

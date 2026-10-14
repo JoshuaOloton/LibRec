@@ -13,7 +13,7 @@ export function ShelfView({ items }: { items: ServedItem[] }) {
   return (
     <div className="grid gap-8 lg:grid-cols-[320px_1fr]">
       <Fade id={top.book.id} className="w-3/4 max-w-xs space-y-4 sm:w-72 lg:w-full">
-        <BookCard book={top.book} reason={top.reason} topPick priority />
+        <BookCard book={top.book} reason={top.reason} alsoRated={top.alsoRated} topPick priority />
         <BookActions bookId={top.book.id} signedIn borrowed={false} rating={0} />
       </Fade>
 
@@ -25,7 +25,7 @@ export function ShelfView({ items }: { items: ServedItem[] }) {
           {rest.map((item) => (
             <li key={item.book.id} className="w-36 shrink-0 snap-start sm:w-40 lg:w-auto">
               <Fade id={item.book.id}>
-                <BookCard book={item.book} reason={item.reason} />
+                <BookCard book={item.book} reason={item.reason} alsoRated={item.alsoRated} />
               </Fade>
             </li>
           ))}
