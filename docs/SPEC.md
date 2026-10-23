@@ -25,7 +25,7 @@ CBF-only and CF-only baselines on the same data under the same protocol.
 |---|---|---|
 | FR1 | Patron creates an account and authenticates | 1 |
 | FR2 | Browse and search the catalogue by title, author and genre | 1 |
-| FR3 | Record borrowing and rating interactions | 1 |
+| FR3 | Record borrowing and rating interactions (a borrow carries a loan period, due date, return and one renewal; see DECISIONS.md, 2026-10-23) | 1 |
 | FR4 | Content-based score via TF-IDF + cosine similarity | 2 |
 | FR5 | Collaborative score via Pearson user similarity | 3 |
 | FR6 | Patrons with < 3 interactions go through the content-based path only | 4 |

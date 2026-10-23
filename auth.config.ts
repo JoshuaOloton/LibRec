@@ -19,7 +19,7 @@ export const authConfig = {
         if (user.role !== "ADMIN") return Response.redirect(new URL("/catalogue", nextUrl));
         return true;
       }
-      if (path.startsWith("/recommendations") || path.startsWith("/onboarding")) {
+      if (path.startsWith("/recommendations") || path.startsWith("/onboarding") || path.startsWith("/loans")) {
         return !!user;
       }
       if ((path === "/login" || path === "/register") && user) {

@@ -14,7 +14,7 @@ export function ShelfView({ items }: { items: ServedItem[] }) {
     <div className="grid gap-8 lg:grid-cols-[320px_1fr]">
       <Fade id={top.book.id} className="w-3/4 max-w-xs space-y-4 sm:w-72 lg:w-full">
         <BookCard book={top.book} reason={top.reason} alsoRated={top.alsoRated} topPick priority />
-        <BookActions bookId={top.book.id} signedIn borrowed={false} rating={0} />
+        <BookActions bookId={top.book.id} signedIn onLoan={false} rating={0} />
       </Fade>
 
       {rest.length > 0 && (

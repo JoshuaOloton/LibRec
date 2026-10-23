@@ -2,7 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
-import { InvalidRatingError, recordBorrow, recordRating } from "@/server/services/interactions";
+import { defaultLoanDays } from "@/lib/loans";
+import {
+  InvalidRatingError,
+  LoanError,
+  recordBorrow,
+  recordRating,
+  renewLoan,
+  returnBook,
+} from "@/server/services/interactions";
 
 export type InteractionResult = { ok: true } | { ok: false; error: string };
 
@@ -14,16 +22,43 @@ async function patronId() {
 const NOT_SIGNED_IN = "Log in to borrow or rate books.";
 const FAILED = "That didn’t save. Check your connection and try again.";
 
-export async function borrowAction(bookId: number): Promise<InteractionResult> {
+export type LoanResult = { ok: true; dueAt: string } | { ok: false; error: string };
+
+export async function borrowAction(bookId: number, days: number = defaultLoanDays): Promise<LoanResult> {
   const userId = await patronId();
   if (!userId) return { ok: false, error: NOT_SIGNED_IN };
   try {
-    await recordBorrow(userId, bookId);
-  } catch {
-    return { ok: false, error: FAILED };
+    const loan = await recordBorrow(userId, bookId, days);
+    revalidatePath("/recommendations");
+    revalidatePath("/loans");
+    return { ok: true, dueAt: loan.dueAt!.toISOString() };
+  } catch (err) {
+    return { ok: false, error: err instanceof LoanError ? err.message : FAILED };
   }
-  revalidatePath("/recommendations");
+}
+
+export async function returnAction(bookId: number): Promise<InteractionResult> {
+  const userId = await patronId();
+  if (!userId) return { ok: false, error: NOT_SIGNED_IN };
+  try {
+    await returnBook(userId, bookId);
+  } catch (err) {
+    return { ok: false, error: err instanceof LoanError ? err.message : FAILED };
+  }
+  revalidatePath("/loans");
   return { ok: true };
+}
+
+export async function renewAction(bookId: number): Promise<LoanResult> {
+  const userId = await patronId();
+  if (!userId) return { ok: false, error: NOT_SIGNED_IN };
+  try {
+    const loan = await renewLoan(userId, bookId);
+    revalidatePath("/loans");
+    return { ok: true, dueAt: loan.dueAt!.toISOString() };
+  } catch (err) {
+    return { ok: false, error: err instanceof LoanError ? err.message : FAILED };
+  }
 }
 
 /**

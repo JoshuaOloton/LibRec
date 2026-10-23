@@ -89,10 +89,10 @@ describe("TC04 interaction recording (FR3)", () => {
   });
 
   it("reports what a patron has done with a book", async () => {
-    expect(await getInteractionState(userId, bookA)).toEqual({ borrowed: false, rating: 0 });
+    expect(await getInteractionState(userId, bookA)).toEqual({ borrowed: false, onLoan: false, dueAt: null, rating: 0 });
     await recordBorrow(userId, bookA);
     await recordRating(userId, bookA, 4);
-    expect(await getInteractionState(userId, bookA)).toEqual({ borrowed: true, rating: 4 });
+    expect(await getInteractionState(userId, bookA)).toMatchObject({ borrowed: true, onLoan: true, rating: 4 });
   });
 
   it("lists a patron's shelf with one entry per book, preferring the rating", async () => {

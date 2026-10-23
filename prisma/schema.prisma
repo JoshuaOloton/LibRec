@@ -75,6 +75,9 @@ model Interaction {
   ratingValue Float?          @map("rating_value")  // 1–5 for RATE; null for BORROW
   timestamp   DateTime        @default(now())
   simulated   Boolean         @default(false)       // true = generated in Cycle 0 (borrows)
+  dueAt       DateTime?       @map("due_at")        // BORROW made in the app; null for simulated borrows
+  returnedAt  DateTime?       @map("returned_at")   // set when the patron returns the book
+  renewals    Int             @default(0)           // times this loan has been renewed
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)

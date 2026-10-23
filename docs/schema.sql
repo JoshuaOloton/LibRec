@@ -42,6 +42,9 @@ CREATE TABLE interactions (
     rating_value      DOUBLE PRECISION CHECK (rating_value BETWEEN 1 AND 5),   -- null for BORROW
     "timestamp"       TIMESTAMPTZ      NOT NULL DEFAULT now(),
     simulated         BOOLEAN          NOT NULL DEFAULT false,
+    due_at            TIMESTAMPTZ,                                              -- BORROW made in the app
+    returned_at       TIMESTAMPTZ,
+    renewals          INTEGER          NOT NULL DEFAULT 0,
     CHECK (
         (interaction_type = 'RATE'   AND rating_value IS NOT NULL) OR
         (interaction_type = 'BORROW' AND rating_value IS NULL)

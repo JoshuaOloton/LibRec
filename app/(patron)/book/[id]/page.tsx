@@ -76,7 +76,8 @@ export default async function BookPage({ params }: { params: Params }) {
         <BookActions
           bookId={book.id}
           signedIn={!!session?.user}
-          borrowed={state?.borrowed ?? false}
+          onLoan={state?.onLoan ?? false}
+          dueAt={state?.dueAt?.toISOString() ?? null}
           rating={state?.rating ?? 0}
         />
       </div>

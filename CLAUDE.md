@@ -219,7 +219,8 @@ on every recommendation, screen layouts, fallback covers and copy rules. Read it
 
 ## Out of scope
 
-Physical library automation, real circulation (due dates, fines, copies; "borrow" is only an interaction event), Koha or
+Physical library automation, real circulation beyond the light loan feature in DECISIONS.md (2026-10-23: loan period, due
+date, return, one renewal, displayed late fee; still no copies, holds or payments), Koha or
 any live-system integration, multi-campus deployment, deep learning / neural CF, matrix factorisation (SVD is
 discussed in the report but **not** chosen).
 
