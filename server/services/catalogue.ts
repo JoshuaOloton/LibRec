@@ -15,6 +15,24 @@ export const getGenres = cache(async () => {
   return rows.map((r) => ({ genre: r.genre, count: Number(r.count) }));
 });
 
+/** Landing page: the books with the most ratings (a plain count, no engine involved) and the catalogue size. */
+export async function getLandingBooks(take = 6) {
+  const [total, counts] = await Promise.all([
+    prisma.book.count(),
+    prisma.interaction.groupBy({
+      by: ["bookId"],
+      where: { type: "RATE" },
+      _count: { bookId: true },
+      orderBy: [{ _count: { bookId: "desc" } }, { bookId: "asc" }],
+      take,
+    }),
+  ]);
+  const rows = await prisma.book.findMany({ where: { id: { in: counts.map((c) => c.bookId) } }, select: bookSelect });
+  const byId = new Map(rows.map((b) => [b.id, b]));
+  const popular = counts.flatMap((c) => byId.get(c.bookId) ?? []);
+  return { total, popular };
+}
+
 export type CatalogueQuery = { q?: string; genre?: string; page?: number };
 
 /**

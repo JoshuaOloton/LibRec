@@ -61,7 +61,7 @@ export async function SiteHeader() {
   return (
     <header className="relative border-b border-rule bg-paper">
       <div className="mx-auto flex max-w-page items-center gap-4 px-4 py-3">
-        <Link href="/catalogue" className="font-serif text-xl font-semibold text-shelf">
+        <Link href="/" className="font-serif text-xl font-semibold text-shelf">
           LibRec
         </Link>
 
