@@ -8,7 +8,7 @@ const navLink = "inline-flex min-h-11 items-center font-bold hover:underline";
 
 async function logoutAction() {
   "use server";
-  await signOut({ redirectTo: "/catalogue" });
+  await signOut({ redirectTo: "/" });
 }
 
 export async function SiteHeader() {
